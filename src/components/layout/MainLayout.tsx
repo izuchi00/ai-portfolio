@@ -3,6 +3,7 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
+import Footer from "./Footer"; // Import the new Footer component
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const MainLayout = () => {
@@ -13,6 +14,7 @@ const MainLayout = () => {
         <Outlet />
       </main>
       <MadeWithDyad />
+      <Footer /> {/* Add the Footer component here */}
     </div>
   );
 };
