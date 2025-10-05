@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { showSuccess, showError } from "@/utils/toast"; // Import toast utility functions
 import ChartBuilder from "@/components/ChartBuilder";
 import ChartDisplay from "@/components/ChartDisplay";
 import DataTablePreview from "@/components/DataTablePreview";
@@ -31,7 +31,7 @@ const DataAnalysis = () => {
 
   useEffect(() => {
     if (initialParsedData && initialParsedData.length > 0) {
-      toast.success("Data loaded for analysis!");
+      showSuccess("Data loaded for analysis!");
       // Convert string values to numbers for charting if possible
       const numericParsedData = initialParsedData.map(row => {
         const newRow: Record<string, any> = {};
@@ -63,7 +63,7 @@ const DataAnalysis = () => {
 
   const handleAnalyze = () => {
     if (parsedData.length === 0) {
-      toast.error("No data available for analysis.");
+      showError("No data available for analysis.");
       return;
     }
 
@@ -81,13 +81,13 @@ const DataAnalysis = () => {
         "Key Metrics: (Demo) Average of Y-Axis: 42, Max: 99, Min: 1, Count: 1000.\n" +
         "Recommendations: (Demo) Consider focusing on 'category B' for higher 'value2'."
       );
-      toast.success("Demo analysis complete!");
+      showSuccess("Demo analysis complete!");
     }, 2000); // Simulate a 2-second analysis time
   };
 
   const handleBuildChart = (chartType: string, xAxis: string, yAxis: string) => {
     setCurrentChart({ type: chartType, xAxis, yAxis });
-    toast.success(`Generated ${chartType.replace("Chart", " chart")} for ${xAxis} vs ${yAxis}!`);
+    showSuccess(`Generated ${chartType.replace("Chart", " chart")} for ${xAxis} vs ${yAxis}!`);
   };
 
   const handleTransformData = (column: string, transformation: string) => {
@@ -109,7 +109,7 @@ const DataAnalysis = () => {
                 row[column] = mean.toFixed(2); // Fill with mean, keep 2 decimal places
               }
             });
-            toast.success(`Simulated: Filled missing values in '${column}' with mean (${mean.toFixed(2)}).`);
+            showSuccess(`Simulated: Filled missing values in '${column}' with mean (${mean.toFixed(2)}).`);
             break;
           }
           case "fill_missing_median": {
@@ -129,7 +129,7 @@ const DataAnalysis = () => {
                 row[column] = median.toFixed(2); // Fill with median
               }
             });
-            toast.success(`Simulated: Filled missing values in '${column}' with median (${median.toFixed(2)}).`);
+            showSuccess(`Simulated: Filled missing values in '${column}' with median (${median.toFixed(2)}).`);
             break;
           }
           case "fill_missing_mode": {
@@ -153,7 +153,7 @@ const DataAnalysis = () => {
                 row[column] = mode;
               }
             });
-            toast.success(`Simulated: Filled missing values in '${column}' with mode ('${mode}').`);
+            showSuccess(`Simulated: Filled missing values in '${column}' with mode ('${mode}').`);
             break;
           }
           case "convert_to_number":
@@ -162,20 +162,20 @@ const DataAnalysis = () => {
               const numValue = Number(value);
               row[column] = !isNaN(numValue) ? numValue : null; // Convert to number, or null if not a valid number
             });
-            toast.success(`Simulated: Converted column '${column}' to numbers.`);
+            showSuccess(`Simulated: Converted column '${column}' to numbers.`);
             break;
           case "convert_to_string":
             newData.forEach(row => {
               row[column] = String(row[column]);
             });
-            toast.success(`Simulated: Converted column '${column}' to strings.`);
+            showSuccess(`Simulated: Converted column '${column}' to strings.`);
             break;
           case "normalize_data": {
             const numericValues = newData
               .map(row => Number(row[column]))
               .filter(value => !isNaN(value));
             if (numericValues.length === 0) {
-              toast.error(`Cannot normalize '${column}': No numeric values found.`);
+              showError(`Cannot normalize '${column}': No numeric values found.`);
               break;
             }
             const min = Math.min(...numericValues);
@@ -186,7 +186,7 @@ const DataAnalysis = () => {
               newData.forEach(row => {
                 if (!isNaN(Number(row[column]))) row[column] = 0; // All values are the same, normalize to 0
               });
-              toast.success(`Simulated: Normalized column '${column}' (all values are the same).`);
+              showSuccess(`Simulated: Normalized column '${column}' (all values are the same).`);
             } else {
               newData.forEach(row => {
                 const value = Number(row[column]);
@@ -194,12 +194,12 @@ const DataAnalysis = () => {
                   row[column] = ((value - min) / range).toFixed(4); // Min-Max normalization
                 }
               });
-              toast.success(`Simulated: Normalized column '${column}' using Min-Max scaling.`);
+              showSuccess(`Simulated: Normalized column '${column}' using Min-Max scaling.`);
             }
             break;
           }
           default:
-            toast.error("Unknown transformation selected.");
+            showError("Unknown transformation selected.");
         }
         return newData;
       });
