@@ -10,7 +10,8 @@ import DataAnalysis from "./pages/DataAnalysis";
 import WebScraping from "./pages/WebScraping";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
-import DataUpload from "./pages/DataUpload"; // Import the new DataUpload page
+import DataUpload from "./pages/DataUpload";
+import TextAnalysis from "./pages/TextAnalysis"; // Import the new TextAnalysis page
 
 const queryClient = new QueryClient();
 
@@ -27,7 +28,8 @@ const App = () => (
             <Route path="web-scraping" element={<WebScraping />} />
             <Route path="contact" element={<Contact />} />
             <Route path="about" element={<About />} />
-            <Route path="upload-data" element={<DataUpload />} /> {/* Add the new DataUpload route */}
+            <Route path="upload-data" element={<DataUpload />} />
+            <Route path="text-analysis" element={<TextAnalysis />} /> {/* Add the new TextAnalysis route */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Route>

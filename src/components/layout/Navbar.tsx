@@ -10,8 +10,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { name: "Home", path: "/" },
-  { name: "Upload Data", path: "/upload-data" }, // Add the new Upload Data link
+  { name: "Upload Data", path: "/upload-data" },
   { name: "Data Analysis", path: "/data-analysis" },
+  { name: "Text Analysis", path: "/text-analysis" }, // Add the new Text Analysis link
   { name: "Web Scraping", path: "/web-scraping" },
   { name: "About", path: "/about" },
   { name: "Contact", path: "/contact" },
