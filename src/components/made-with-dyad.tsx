@@ -1,4 +1,6 @@
-export const MadeWithDyad = () => {
+import React from "react";
+
+export const MadeWithDyad: React.FC = () => {
   return (
     <div className="p-4 text-center">
       <a
