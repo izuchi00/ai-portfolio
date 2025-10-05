@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
 
 const navItems = [
   { name: "Home", path: "/" },
   { name: "Data Analysis", path: "/data-analysis" },
   { name: "Web Scraping", path: "/web-scraping" },
-  { name: "Contact", path: "/contact" }, // Placeholder for a contact page
+  { name: "Contact", path: "/contact" },
 ];
 
 const Navbar = () => {
@@ -39,16 +40,20 @@ const Navbar = () => {
                     {item.name}
                   </Link>
                 ))}
+                <div className="pt-4">
+                  <ThemeToggle /> {/* Add ThemeToggle to mobile menu */}
+                </div>
               </div>
             </SheetContent>
           </Sheet>
         ) : (
-          <div className="flex space-x-6">
+          <div className="flex items-center space-x-6">
             {navItems.map((item) => (
               <Link key={item.name} to={item.path} className="text-lg hover:underline transition-colors">
                 {item.name}
               </Link>
             ))}
+            <ThemeToggle /> {/* Add ThemeToggle to desktop navbar */}
           </div>
         )}
       </div>
