@@ -9,12 +9,14 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const DataUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<Record<string, string>[]>([]);
   const [dataHeaders, setDataHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -111,6 +113,14 @@ const DataUpload = () => {
     }
   };
 
+  const handleProceedToAnalysis = () => {
+    if (parsedData.length > 0) {
+      navigate("/data-analysis", { state: { parsedData, dataHeaders } });
+    } else {
+      toast.error("Please upload and parse a file before proceeding to analysis.");
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-8">
       <Card className="w-full max-w-5xl">
@@ -138,7 +148,7 @@ const DataUpload = () => {
               <DataTablePreview data={parsedData} headers={dataHeaders} />
               {parsedData.length > 0 && (
                 <div className="text-center">
-                  <Button size="lg" className="mt-4">
+                  <Button size="lg" className="mt-4" onClick={handleProceedToAnalysis}>
                     Proceed to Analysis
                   </Button>
                 </div>
