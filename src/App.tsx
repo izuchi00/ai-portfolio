@@ -1,4 +1,3 @@
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,14 +10,13 @@ import WebScraping from "./pages/WebScraping";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
 import DataUpload from "./pages/DataUpload";
-import TextAnalysis from "./pages/TextAnalysis"; // Import the new TextAnalysis page
+import TextAnalysis from "./pages/TextAnalysis";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
       <Sonner />
       <BrowserRouter>
         <Routes>
@@ -29,7 +27,7 @@ const App = () => (
             <Route path="contact" element={<Contact />} />
             <Route path="about" element={<About />} />
             <Route path="upload-data" element={<DataUpload />} />
-            <Route path="text-analysis" element={<TextAnalysis />} /> {/* Add the new TextAnalysis route */}
+            <Route path="text-analysis" element={<TextAnalysis />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Route>
