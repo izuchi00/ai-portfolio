@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import Sidebar from "./Sidebar"; // Import the new Sidebar component
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -49,7 +48,6 @@ const MainLayout = () => {
         <main className="flex-grow container mx-auto p-4">
           <Outlet />
         </main>
-        <MadeWithDyad />
         <Footer />
       </div>
     );
@@ -85,7 +83,6 @@ const MainLayout = () => {
           </main>
         </ResizablePanel>
       </ResizablePanelGroup>
-      <MadeWithDyad />
       <Footer />
     </div>
   );
