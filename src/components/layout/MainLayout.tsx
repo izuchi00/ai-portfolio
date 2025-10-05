@@ -4,16 +4,14 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import Sidebar from "./Sidebar"; // Import the new Sidebar component
+import Sidebar from "./Sidebar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetContent } from "@/components/ui/sheet"; // Import Sheet components
-import { cn } from "@/lib/utils"; // Import cn utility
+import { cn } from "@/lib/utils";
 
 const MainLayout = () => {
   const isMobile = useIsMobile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Define sidebar sizes
   const collapsedSize = 3; // Corresponds to 56px width
@@ -21,10 +19,6 @@ const MainLayout = () => {
 
   const handleCollapseToggle = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
-  };
-
-  const handleMobileSidebarToggle = () => {
-    setIsMobileSidebarOpen(!isMobileSidebarOpen);
   };
 
   const handleSidebarResize = (size: number) => {
@@ -39,12 +33,7 @@ const MainLayout = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col min-h-screen">
-        <Navbar onMobileMenuClick={handleMobileSidebarToggle} />
-        <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-          <SheetContent side="left" className="p-0 w-[250px] sm:w-[300px]">
-            <Sidebar isCollapsed={false} onCollapseToggle={handleMobileSidebarToggle} />
-          </SheetContent>
-        </Sheet>
+        <Navbar />
         <main className="flex-grow container mx-auto p-4">
           <Outlet />
         </main>
@@ -55,7 +44,7 @@ const MainLayout = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar onMobileMenuClick={handleMobileSidebarToggle} /> {/* Keep Navbar for branding/theme */}
+      <Navbar />
       <ResizablePanelGroup
         direction="horizontal"
         className="flex-grow"
