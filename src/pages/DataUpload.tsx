@@ -8,15 +8,15 @@ import DataTablePreview from "@/components/DataTablePreview";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
+import LoadingSpinner from "@/components/LoadingSpinner"; // Import LoadingSpinner
 
 const DataUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<Record<string, string>[]>([]);
   const [dataHeaders, setDataHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -135,7 +135,7 @@ const DataUpload = () => {
 
           {isLoading && (
             <div className="flex items-center justify-center space-x-2 text-primary">
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <LoadingSpinner size={20} />
               <span>Parsing file...</span>
             </div>
           )}

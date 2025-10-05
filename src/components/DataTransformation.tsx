@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import LoadingSpinner from "@/components/LoadingSpinner"; // Import LoadingSpinner
 
 interface DataTransformationProps {
   headers: string[];
@@ -88,7 +88,7 @@ const DataTransformation: React.FC<DataTransformationProps> = ({
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoadingSpinner size={16} className="mr-2" />
               Applying...
             </>
           ) : (

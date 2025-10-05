@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Smile, Tag, BookOpen } from "lucide-react";
+import { Smile, Tag, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import LoadingSpinner from "@/components/LoadingSpinner"; // Import LoadingSpinner
 
 const TextAnalysis = () => {
   const [inputText, setInputText] = useState<string>("");
@@ -87,7 +88,7 @@ const TextAnalysis = () => {
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <LoadingSpinner size={16} className="mr-2" />
                 Analyzing...
               </>
             ) : (
