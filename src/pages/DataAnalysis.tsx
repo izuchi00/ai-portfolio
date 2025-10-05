@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom"; // Import Link
+import { useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import ChartBuilder from "@/components/ChartBuilder";
 import ChartDisplay from "@/components/ChartDisplay";
 import DataTablePreview from "@/components/DataTablePreview";
-import AIChatInterface from "@/components/AIChatInterface"; // Import AIChatInterface
+import AIChatInterface from "@/components/AIChatInterface";
+import DataTransformation from "@/components/DataTransformation"; // Import DataTransformation
 
 const DataAnalysis = () => {
   const location = useLocation();
@@ -18,7 +19,8 @@ const DataAnalysis = () => {
   };
 
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
+  const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
   const [parsedData, setParsedData] = useState<Record<string, any>[]>(initialParsedData || []);
   const [dataHeaders, setDataHeaders] = useState<string[]>(initialDataHeaders || []);
 
@@ -44,13 +46,14 @@ const DataAnalysis = () => {
     } else {
       // If no data is passed, provide a dummy dataset for demo purposes
       const dummyData = [
-        { category: "A", value1: 10, value2: 20 },
-        { category: "B", value1: 15, value2: 25 },
-        { category: "C", value1: 7, value2: 18 },
-        { category: "D", value1: 20, value2: 30 },
+        { category: "A", value1: 10, value2: 20, value3: null },
+        { category: "B", value1: 15, value2: 25, value3: 5 },
+        { category: "C", value1: 7, value2: 18, value3: 10 },
+        { category: "D", value1: 20, value2: 30, value3: null },
+        { category: "E", value1: 12, value2: 22, value3: 15 },
       ];
       setParsedData(dummyData);
-      setDataHeaders(["category", "value1", "value2"]);
+      setDataHeaders(["category", "value1", "value2", "value3"]);
       setSelectedChartType("BarChart");
       setSelectedXAxis("category");
       setSelectedYAxis("value1");
@@ -64,12 +67,12 @@ const DataAnalysis = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsLoadingAnalysis(true);
     setAnalysisResult(null);
 
     // Simulate API call for data analysis
     setTimeout(() => {
-      setIsLoading(false);
+      setIsLoadingAnalysis(false);
       setAnalysisResult(
         `Demo AI Analysis for your dataset (${parsedData.length} rows):\n\n` +
         "Summary: Our AI identified key trends and patterns. For a full, in-depth analysis, " +
@@ -85,6 +88,123 @@ const DataAnalysis = () => {
   const handleBuildChart = (chartType: string, xAxis: string, yAxis: string) => {
     setCurrentChart({ type: chartType, xAxis, yAxis });
     toast.success(`Generated ${chartType.replace("Chart", " chart")} for ${xAxis} vs ${yAxis}!`);
+  };
+
+  const handleTransformData = (column: string, transformation: string) => {
+    setIsLoadingTransformation(true);
+    setTimeout(() => {
+      setParsedData(prevData => {
+        const newData = prevData.map(row => ({ ...row })); // Deep copy to avoid direct state mutation
+        
+        switch (transformation) {
+          case "fill_missing_mean": {
+            const numericValues = newData
+              .map(row => Number(row[column]))
+              .filter(value => !isNaN(value));
+            const mean = numericValues.length > 0
+              ? numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length
+              : 0;
+            newData.forEach(row => {
+              if (row[column] === null || row[column] === undefined || row[column] === "") {
+                row[column] = mean.toFixed(2); // Fill with mean, keep 2 decimal places
+              }
+            });
+            toast.success(`Simulated: Filled missing values in '${column}' with mean (${mean.toFixed(2)}).`);
+            break;
+          }
+          case "fill_missing_median": {
+            const numericValues = newData
+              .map(row => Number(row[column]))
+              .filter(value => !isNaN(value))
+              .sort((a, b) => a - b);
+            let median = 0;
+            if (numericValues.length > 0) {
+              const mid = Math.floor(numericValues.length / 2);
+              median = numericValues.length % 2 === 0
+                ? (numericValues[mid - 1] + numericValues[mid]) / 2
+                : numericValues[mid];
+            }
+            newData.forEach(row => {
+              if (row[column] === null || row[column] === undefined || row[column] === "") {
+                row[column] = median.toFixed(2); // Fill with median
+              }
+            });
+            toast.success(`Simulated: Filled missing values in '${column}' with median (${median.toFixed(2)}).`);
+            break;
+          }
+          case "fill_missing_mode": {
+            const valueCounts: { [key: string]: number } = {};
+            newData.forEach(row => {
+              const value = String(row[column]);
+              if (value !== null && value !== undefined && value !== "") {
+                valueCounts[value] = (valueCounts[value] || 0) + 1;
+              }
+            });
+            let mode = "";
+            let maxCount = 0;
+            for (const value in valueCounts) {
+              if (valueCounts[value] > maxCount) {
+                maxCount = valueCounts[value];
+                mode = value;
+              }
+            }
+            newData.forEach(row => {
+              if (row[column] === null || row[column] === undefined || row[column] === "") {
+                row[column] = mode;
+              }
+            });
+            toast.success(`Simulated: Filled missing values in '${column}' with mode ('${mode}').`);
+            break;
+          }
+          case "convert_to_number":
+            newData.forEach(row => {
+              const value = row[column];
+              const numValue = Number(value);
+              row[column] = !isNaN(numValue) ? numValue : null; // Convert to number, or null if not a valid number
+            });
+            toast.success(`Simulated: Converted column '${column}' to numbers.`);
+            break;
+          case "convert_to_string":
+            newData.forEach(row => {
+              row[column] = String(row[column]);
+            });
+            toast.success(`Simulated: Converted column '${column}' to strings.`);
+            break;
+          case "normalize_data": {
+            const numericValues = newData
+              .map(row => Number(row[column]))
+              .filter(value => !isNaN(value));
+            if (numericValues.length === 0) {
+              toast.error(`Cannot normalize '${column}': No numeric values found.`);
+              break;
+            }
+            const min = Math.min(...numericValues);
+            const max = Math.max(...numericValues);
+            const range = max - min;
+
+            if (range === 0) {
+              newData.forEach(row => {
+                if (!isNaN(Number(row[column]))) row[column] = 0; // All values are the same, normalize to 0
+              });
+              toast.success(`Simulated: Normalized column '${column}' (all values are the same).`);
+            } else {
+              newData.forEach(row => {
+                const value = Number(row[column]);
+                if (!isNaN(value)) {
+                  row[column] = ((value - min) / range).toFixed(4); // Min-Max normalization
+                }
+              });
+              toast.success(`Simulated: Normalized column '${column}' using Min-Max scaling.`);
+            }
+            break;
+          }
+          default:
+            toast.error("Unknown transformation selected.");
+        }
+        return newData;
+      });
+      setIsLoadingTransformation(false);
+    }, 1500); // Simulate transformation time
   };
 
   // Generate a simple data summary for the AI chat
@@ -110,6 +230,14 @@ const DataAnalysis = () => {
             <>
               <h3 className="text-xl font-semibold">Your Data Preview:</h3>
               <DataTablePreview data={parsedData} headers={dataHeaders} />
+
+              <div className="space-y-4">
+                <DataTransformation
+                  headers={dataHeaders}
+                  onTransformData={handleTransformData}
+                  isLoading={isLoadingTransformation}
+                />
+              </div>
 
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold">Interactive Chart Builder:</h3>
@@ -141,8 +269,8 @@ const DataAnalysis = () => {
                 <p className="text-md text-destructive-foreground font-medium">
                   For complete analysis, advanced cleaning, custom visualizations, and in-depth reports, please inquire about our services.
                 </p>
-                <Button size="lg" onClick={handleAnalyze} disabled={isLoading}>
-                  {isLoading ? "Analyzing..." : "Run AI Analysis (Demo)"}
+                <Button size="lg" onClick={handleAnalyze} disabled={isLoadingAnalysis}>
+                  {isLoadingAnalysis ? "Analyzing..." : "Run AI Analysis (Demo)"}
                 </Button>
               </div>
 
