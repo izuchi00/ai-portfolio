@@ -75,6 +75,38 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* About Me Section */}
+      <section className="w-full py-12 md:py-20">
+        <div className="container mx-auto px-4 md:px-6">
+          <h2 className="text-4xl font-bold text-primary text-center mb-12">About Me</h2>
+          <Card className="p-8 max-w-4xl mx-auto text-left">
+            <CardHeader>
+              <CardTitle className="text-3xl font-semibold mb-4">Computer Science Graduate & AI Enthusiast</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-lg text-muted-foreground">
+              <p>
+                Hello! I'm a passionate Computer Science graduate with a strong foundation in algorithms, data structures, and software development. My journey into the world of Artificial Intelligence has equipped me with expertise in both generative and agentic AI paradigms.
+              </p>
+              <p>
+                I thrive on transforming complex data challenges into innovative solutions. My goal is to leverage AI to automate tedious tasks, extract meaningful insights from vast datasets, and build intelligent systems that drive efficiency and growth for businesses.
+              </p>
+              <p>
+                I am particularly interested in roles that involve:
+              </p>
+              <ul className="list-disc list-inside ml-4 space-y-1">
+                <li>Developing and deploying AI models for data analysis and prediction.</li>
+                <li>Designing and implementing intelligent agents for automation and optimization.</li>
+                <li>Building robust web scraping solutions for data acquisition.</li>
+                <li>Creating intuitive data visualizations to communicate complex findings.</li>
+              </ul>
+              <p>
+                Let's connect and explore how my skills can help your team overcome data hurdles and embrace the power of AI!
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </div>
   );
 };
