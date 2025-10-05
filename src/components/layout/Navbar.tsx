@@ -30,9 +30,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMobileMenuClick }) => {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* On desktop, main navigation is in the sidebar, so only theme toggle here */}
-          {!isMobile && <ThemeToggle />}
-          {isMobile && <ThemeToggle />} {/* Keep theme toggle for mobile too */}
+          <ThemeToggle />
         </div>
       </div>
     </nav>
