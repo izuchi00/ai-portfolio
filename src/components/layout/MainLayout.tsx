@@ -16,12 +16,25 @@ const MainLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Define sidebar sizes
+  const collapsedSize = 3; // Corresponds to 56px width
+  const expandedSize = 15; // Corresponds to 240px width
+
   const handleCollapseToggle = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   const handleMobileSidebarToggle = () => {
     setIsMobileSidebarOpen(!isMobileSidebarOpen);
+  };
+
+  const handleSidebarResize = (size: number) => {
+    // If the user resizes the panel, update the collapsed state
+    if (size <= collapsedSize + 1 && !isSidebarCollapsed) { // Add a small buffer for user interaction
+      setIsSidebarCollapsed(true);
+    } else if (size > collapsedSize + 1 && isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
   };
 
   if (isMobile) {
@@ -50,13 +63,14 @@ const MainLayout = () => {
         className="flex-grow"
       >
         <ResizablePanel
-          defaultSize={isSidebarCollapsed ? 3 : 15}
-          minSize={isSidebarCollapsed ? 3 : 15}
-          maxSize={isSidebarCollapsed ? 3 : 20}
+          size={isSidebarCollapsed ? collapsedSize : expandedSize}
+          minSize={collapsedSize}
+          maxSize={20} // Allow manual resize up to 20%
           collapsible={true}
-          collapsedSize={3}
+          collapsedSize={collapsedSize}
           onCollapse={() => setIsSidebarCollapsed(true)}
           onExpand={() => setIsSidebarCollapsed(false)}
+          onResize={handleSidebarResize} // Handle manual resizing
           className={cn(
             "min-w-[56px] transition-all duration-300 ease-in-out",
             isSidebarCollapsed && "min-w-[56px]"
@@ -65,7 +79,7 @@ const MainLayout = () => {
           <Sidebar isCollapsed={isSidebarCollapsed} onCollapseToggle={handleCollapseToggle} />
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={85}>
+        <ResizablePanel defaultSize={100 - expandedSize}> {/* Adjust default size for main content */}
           <main className="flex-grow container mx-auto p-4">
             <Outlet />
           </main>
