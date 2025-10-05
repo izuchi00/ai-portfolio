@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ThemeToggle } from "@/components/ThemeToggle"; // Import ThemeToggle
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { name: "Home", path: "/" },
   { name: "Data Analysis", path: "/data-analysis" },
   { name: "Web Scraping", path: "/web-scraping" },
+  { name: "About", path: "/about" }, // Add the new About link
   { name: "Contact", path: "/contact" },
 ];
 
@@ -41,7 +42,7 @@ const Navbar = () => {
                   </Link>
                 ))}
                 <div className="pt-4">
-                  <ThemeToggle /> {/* Add ThemeToggle to mobile menu */}
+                  <ThemeToggle />
                 </div>
               </div>
             </SheetContent>
@@ -53,7 +54,7 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-            <ThemeToggle /> {/* Add ThemeToggle to desktop navbar */}
+            <ThemeToggle />
           </div>
         )}
       </div>
