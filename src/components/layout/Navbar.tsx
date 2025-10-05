@@ -25,7 +25,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMobileMenuClick }) => {
             </Button>
           )}
           <Link to="/" className="text-2xl font-bold">
-            My AI Portfolio
+            AI Portfolio
           </Link>
         </div>
 

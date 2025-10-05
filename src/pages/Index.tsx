@@ -10,7 +10,7 @@ const Index = () => {
   return (
     <div className="flex flex-col items-center justify-center text-center px-4 py-8">
       {/* Hero Section */}
-      <div className="min-h-[calc(100vh-150px)] flex flex-col items-center justify-center text-center px-4 py-8">
+      <div className="flex flex-col items-center justify-center text-center px-4 py-8 flex-grow">
         <h1 className="text-5xl md:text-6xl font-extrabold text-primary mb-6 leading-tight">
           Innovate with AI: Your Data, Our Intelligence
         </h1>
