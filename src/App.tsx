@@ -8,8 +8,8 @@ import NotFound from "./pages/NotFound";
 import MainLayout from "./components/layout/MainLayout";
 import DataAnalysis from "./pages/DataAnalysis";
 import WebScraping from "./pages/WebScraping";
-import Contact from "./pages/Contact";
-import About from "./pages/About"; // Import the new About page
+import Contact from "./pages/Contact"; // Import the new Contact page
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -24,8 +24,8 @@ const App = () => (
             <Route index element={<Index />} />
             <Route path="data-analysis" element={<DataAnalysis />} />
             <Route path="web-scraping" element={<WebScraping />} />
-            <Route path="contact" element={<Contact />} />
-            <Route path="about" element={<About />} /> {/* Add the new About route */}
+            <Route path="contact" element={<Contact />} /> {/* Add the new Contact route */}
+            <Route path="about" element={<About />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Route>

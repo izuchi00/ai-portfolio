@@ -12,8 +12,8 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "Data Analysis", path: "/data-analysis" },
   { name: "Web Scraping", path: "/web-scraping" },
-  { name: "About", path: "/about" }, // Add the new About link
-  { name: "Contact", path: "/contact" },
+  { name: "About", path: "/about" },
+  { name: "Contact", path: "/contact" }, // Add the new Contact link
 ];
 
 const Navbar = () => {
