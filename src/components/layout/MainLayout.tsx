@@ -9,6 +9,7 @@ import Sidebar from "./Sidebar"; // Import the new Sidebar component
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet"; // Import Sheet components
+import { cn } from "@/lib/utils"; // Import cn utility
 
 const MainLayout = () => {
   const isMobile = useIsMobile();
