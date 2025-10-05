@@ -1,15 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom"; // Import Link
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import ChartBuilder from "@/components/ChartBuilder";
 import ChartDisplay from "@/components/ChartDisplay";
 import DataTablePreview from "@/components/DataTablePreview";
+import AIChatInterface from "@/components/AIChatInterface"; // Import AIChatInterface
 
 const DataAnalysis = () => {
   const location = useLocation();
@@ -18,7 +17,6 @@ const DataAnalysis = () => {
     dataHeaders?: string[];
   };
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Kept for demo purposes, but actual data comes from state
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [parsedData, setParsedData] = useState<Record<string, any>[]>(initialParsedData || []);
@@ -89,6 +87,14 @@ const DataAnalysis = () => {
     toast.success(`Generated ${chartType.replace("Chart", " chart")} for ${xAxis} vs ${yAxis}!`);
   };
 
+  // Generate a simple data summary for the AI chat
+  const generateDataSummary = () => {
+    if (parsedData.length === 0) return "No data available.";
+    const numRows = parsedData.length;
+    const numCols = dataHeaders.length;
+    return `Your dataset contains ${numRows} rows and ${numCols} columns. Key columns include: ${dataHeaders.slice(0, 3).join(", ")}${numCols > 3 ? "..." : ""}.`;
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-8">
       <Card className="w-full max-w-5xl">
@@ -146,6 +152,10 @@ const DataAnalysis = () => {
                   <p className="text-muted-foreground">{analysisResult}</p>
                 </div>
               )}
+
+              <div className="mt-8">
+                <AIChatInterface dataHeaders={dataHeaders} dataSummary={generateDataSummary()} />
+              </div>
             </>
           ) : (
             <div className="text-center space-y-4">
