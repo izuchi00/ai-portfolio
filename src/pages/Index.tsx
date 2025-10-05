@@ -4,7 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Brain, Bot, BarChart, FileText } from "lucide-react"; // Added FileText icon
+import { Brain, Bot, BarChart, FileText, Globe } from "lucide-react"; // Added Globe icon for Web Scraping
 
 const Index = () => {
   return (
@@ -36,7 +36,7 @@ const Index = () => {
       <section className="w-full py-12 md:py-20 bg-muted/40">
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-4xl font-bold text-primary text-center mb-12">Our AI Approach</h2>
-          <div className="grid gap-8 md:grid-cols-4"> {/* Changed to md:grid-cols-4 */}
+          <div className="grid gap-8 md:grid-cols-4">
             <Card className="flex flex-col items-center p-6 text-center">
               <Brain className="h-12 w-12 text-primary mb-4" />
               <CardHeader>
@@ -49,42 +49,47 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col items-center p-6 text-center">
-              <Bot className="h-12 w-12 text-primary mb-4" />
-              <CardHeader>
-                <CardTitle className="text-2xl font-semibold">Agentic AI</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-muted-foreground">
-                  Deploy intelligent agents that autonomously perform complex tasks like data cleaning, feature engineering, and multi-step web scraping.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/data-analysis" className="block">
+              <Card className="flex flex-col items-center p-6 text-center h-full hover:bg-accent transition-colors">
+                <BarChart className="h-12 w-12 text-primary mb-4" />
+                <CardHeader>
+                  <CardTitle className="text-2xl font-semibold">Data-Driven Insights</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-muted-foreground">
+                    Transform raw data into actionable intelligence with AI-powered analytics, predictive modeling, and intuitive data visualizations.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="flex flex-col items-center p-6 text-center">
-              <BarChart className="h-12 w-12 text-primary mb-4" />
-              <CardHeader>
-                <CardTitle className="text-2xl font-semibold">Data-Driven Insights</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-muted-foreground">
-                  Transform raw data into actionable intelligence with AI-powered analytics, predictive modeling, and intuitive data visualizations.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/text-analysis" className="block">
+              <Card className="flex flex-col items-center p-6 text-center h-full hover:bg-accent transition-colors">
+                <FileText className="h-12 w-12 text-primary mb-4" />
+                <CardHeader>
+                  <CardTitle className="text-2xl font-semibold">Text Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-muted-foreground">
+                    Utilize AI to understand and process natural language, extracting sentiment, keywords, and generating concise summaries from text.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
 
-            {/* New Card for Text Analysis */}
-            <Card className="flex flex-col items-center p-6 text-center">
-              <FileText className="h-12 w-12 text-primary mb-4" />
-              <CardHeader>
-                <CardTitle className="text-2xl font-semibold">Text Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-muted-foreground">
-                  Utilize AI to understand and process natural language, extracting sentiment, keywords, and generating concise summaries from text.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/web-scraping" className="block">
+              <Card className="flex flex-col items-center p-6 text-center h-full hover:bg-accent transition-colors">
+                <Globe className="h-12 w-12 text-primary mb-4" />
+                <CardHeader>
+                  <CardTitle className="text-2xl font-semibold">Web Scraping</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-muted-foreground">
+                    Deploy intelligent agents that autonomously perform complex tasks like data cleaning, feature engineering, and multi-step web scraping.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
       </section>
