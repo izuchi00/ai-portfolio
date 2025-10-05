@@ -103,6 +103,13 @@ const Index = () => {
               <p>
                 Let's connect and explore how my skills can help your team overcome data hurdles and embrace the power of AI!
               </p>
+              <div className="text-center mt-8">
+                <Link to="/contact">
+                  <Button size="lg" className="text-lg px-8 py-6">
+                    Contact Us
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>
