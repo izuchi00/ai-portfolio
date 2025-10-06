@@ -1,13 +1,14 @@
-import React from "react"; // Added this import
+import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./globals.css";
-import { ThemeProvider } from "./components/layout/ThemeProvider.tsx";
+// Temporarily removing ThemeProvider to simplify and isolate the error
+// import { ThemeProvider } from "./components/layout/ThemeProvider.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ThemeProvider defaultTheme="system" attribute="class">
+    {/* <ThemeProvider defaultTheme="system" attribute="class"> */}
       <App />
-    </ThemeProvider>
+    {/* </ThemeProvider> */}
   </React.StrictMode>
 );
