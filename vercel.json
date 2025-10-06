@@ -12,8 +12,7 @@
   ],
   "functions": {
     "api/ai-chat.ts": {
-      "runtime": "nodejs@20.x",
-      "src": "api/ai-chat.ts"
+      "runtime": "nodejs@20.x"
     }
   }
 }
