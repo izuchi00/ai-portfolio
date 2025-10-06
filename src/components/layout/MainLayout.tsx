@@ -4,22 +4,19 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import DesktopLayout from "./DesktopLayout";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile"; // Still needed for potential future use or other components
 
 const MainLayout = () => {
-  const isMobile = useIsMobile();
+  // The useIsMobile hook is kept here for now, but its logic is not directly used in the return for simplification.
+  // It can be re-integrated or removed if not needed after the fix.
+  const isMobile = useIsMobile(); 
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      {isMobile ? (
-        <main className="flex-grow container mx-auto p-4">
-          <Outlet />
-        </main>
-      ) : (
-        <DesktopLayout /> {/* DesktopLayout will handle its own Outlet and container styling */}
-      )}
+      <main className="flex-grow container mx-auto p-4">
+        <Outlet />
+      </main>
       <Footer />
     </div>
   );
