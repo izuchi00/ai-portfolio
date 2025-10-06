@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState } from "react"; // Explicitly importing React
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
