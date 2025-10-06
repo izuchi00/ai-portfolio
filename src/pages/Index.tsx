@@ -19,7 +19,7 @@ const Index = () => {
           Showcasing cutting-edge generative and agentic AI solutions for data processing, advanced analytics, and intelligent web scraping.
           Transform raw data into actionable insights and unlock new possibilities.
         </p>
-        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
+        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 justify-center">
           <Link to="/data-analysis">
             <Button size="lg" className="text-lg px-8 py-6">
               Explore Data Analysis
