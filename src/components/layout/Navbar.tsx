@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Sheet, SheetContent } from "@/components/ui/sheet"; // Import Sheet components
-import Sidebar from "./Sidebar"; // Import Sidebar
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import Sidebar from "./Sidebar";
 
 const Navbar: React.FC = () => {
   const isMobile = useIsMobile();
@@ -40,7 +40,8 @@ const Navbar: React.FC = () => {
       {isMobile && (
         <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
           <SheetContent side="left" className="p-0 w-[250px] sm:w-[300px]">
-            <Sidebar isCollapsed={false} onCollapseToggle={handleMobileSidebarToggle} />
+            {/* For mobile, the sidebar should always be uncollapsed, and its toggle button should close the sheet */}
+            <Sidebar isCollapsed={false} onCollapseToggle={() => setIsMobileSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
       )}
