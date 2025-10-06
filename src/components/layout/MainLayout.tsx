@@ -1,25 +1,22 @@
 "use client";
 
-import React from "react"; // Explicitly importing React
+import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import DesktopLayout from "./DesktopLayout";
-import { useIsMobile } from "@/hooks/use-mobile";
+// DesktopLayout and useIsMobile are temporarily removed to simplify and isolate the error
+// import DesktopLayout from "./DesktopLayout";
+// import { useIsMobile } from "@/hooks/use-mobile";
 
 const MainLayout = () => {
-  const isMobile = useIsMobile();
+  // const isMobile = useIsMobile(); // Temporarily commented out
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      {isMobile ? (
-        <main className="flex-grow container mx-auto p-4">
-          <Outlet />
-        </main>
-      ) : (
-        <DesktopLayout /> {/* DesktopLayout will handle its own Outlet and container styling */}
-      )}
+      <main className="flex-grow container mx-auto p-4">
+        <Outlet />
+      </main>
       <Footer />
     </div>
   );
