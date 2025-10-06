@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const HF_INFERENCE_API_URL = "https://api-inference.huggingface.co/models/";
-const HF_MODEL = "microsoft/DialoGPT-medium"; // Changed to microsoft/DialoGPT-medium
+const HF_MODEL = (process.env.HF_MODEL || 'HuggingFaceH4/zephyr-7b-beta').trim(); // Use env var with fallback
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const corsHeaders = {
