@@ -9,10 +9,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/ai-chat.ts": {
-      // Removed "runtime": "nodejs20.x" to allow Vercel to infer the Node.js runtime
-    }
-  }
+  ]
 }
