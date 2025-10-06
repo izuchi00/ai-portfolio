@@ -49,9 +49,9 @@ const DesktopLayout: React.FC = () => {
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={100 - expandedSize}>
-        <main className="h-full overflow-y-auto container mx-auto p-4"> {/* Added h-full and overflow-y-auto */}
+        <div className="h-full overflow-y-auto"> {/* Removed container mx-auto p-4, now handled by MainLayout */}
           <Outlet />
-        </main>
+        </div>
       </ResizablePanel>
     </ResizablePanelGroup>
   );

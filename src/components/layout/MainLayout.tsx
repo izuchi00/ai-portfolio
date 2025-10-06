@@ -13,15 +13,12 @@ const MainLayout = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      {isMobile ? (
-        <main className="flex-grow container mx-auto p-4">
-          <Outlet />
+      <div className="flex-grow flex"> {/* This flex container holds the sidebar (if desktop) and the main content */}
+        {!isMobile && <DesktopLayout />}
+        <main className="flex-grow container mx-auto p-4"> {/* This main tag now consistently wraps the content */}
+          {isMobile ? <Outlet /> : null} {/* Outlet for mobile is here */}
         </main>
-      ) : (
-        <div className="flex-grow flex"> {/* Added flex-grow and flex to ensure DesktopLayout fills the space */}
-          <DesktopLayout />
-        </div>
-      )}
+      </div>
       <Footer />
     </div>
   );
