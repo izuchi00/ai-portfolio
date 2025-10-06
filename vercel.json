@@ -12,7 +12,7 @@
   ],
   "functions": {
     "api/ai-chat.ts": {
-      "runtime": "nodejs18.x"
+      "runtime": "nodejs@18.x"
     }
   }
 }
