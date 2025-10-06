@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const HF_INFERENCE_API_URL = "https://api-inference.huggingface.co/models/";
-const HF_MODEL = "gpt2"; // Using gpt2 for testing accessibility
+const HF_MODEL = "distilgpt2"; // Changed to distilgpt2 for further testing
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const corsHeaders = {
@@ -38,13 +38,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt is required.' });
     }
 
-    const HF_TOKEN = process.env.HF_TOKEN; // Changed from HF_API_KEY to HF_TOKEN
+    const HF_TOKEN = process.env.HF_TOKEN;
 
     if (!HF_TOKEN) {
       console.error("Hugging Face API Token (HF_TOKEN) not set in environment variables.");
       return res.status(500).json({ error: 'Hugging Face API Token (HF_TOKEN) not set. Please configure it in Vercel environment variables.' });
     }
-    console.log(`HF_TOKEN length: ${HF_TOKEN.length}`); // Log key length for debugging
+    console.log(`HF_TOKEN length: ${HF_TOKEN.length > 0 ? 'Present (' + HF_TOKEN.length + ' chars)' : 'Empty'}`); // Log key length for debugging
 
     console.log(`Calling Hugging Face Inference API with model: ${HF_MODEL}`);
     const response = await fetch(`${HF_INFERENCE_API_URL}${HF_MODEL}`, {
@@ -58,8 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         parameters: {
           max_new_tokens: 500,
           temperature: 0.7,
-          do_sample: true, // Added parameter
-          return_full_text: false // Added parameter
+          do_sample: true,
+          return_full_text: false
         },
       }),
     });
@@ -74,7 +74,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (e) {
         // Not a JSON error, use raw text
       }
-      // More specific error handling for 401 vs 404
       if (response.status === 401) {
         return res.status(401).json({ error: `Hugging Face API authentication failed. Check your HF_TOKEN. - ${errorDetail}` });
       } else if (response.status === 404) {
