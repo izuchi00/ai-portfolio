@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const HF_INFERENCE_API_URL = "https://api-inference.huggingface.co/models/";
-const HF_MODEL = "HuggingFaceH4/zephyr-7b-beta"; // You can change this to your preferred model
+const HF_MODEL = "gpt2"; // Changed to a more common model for testing
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const corsHeaders = {
@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt is required.' });
     }
 
-    const HF_API_KEY = process.env.HF_API_KEY; // Reverted to HF_API_KEY
+    const HF_API_KEY = process.env.HF_API_KEY;
 
     if (!HF_API_KEY) {
       console.error("Hugging Face API Key (HF_API_KEY) not set in environment variables.");
@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text(); // Get raw text to avoid json parsing errors
+      const errorText = await response.text();
       console.error(`Hugging Face API Error: Status ${response.status}, Text: ${errorText}`);
       let errorDetail = errorText;
       try {
