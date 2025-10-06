@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, User } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase"; // Import the Supabase client
 
 interface Message {
   id: string;
@@ -39,38 +40,37 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
     setInput("");
     setIsThinking(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponseText = generateSimulatedAIResponse(userMessage.text, dataHeaders, dataSummary);
-      const aiMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: aiResponseText };
-      setMessages((prev) => [...prev, aiMessage]);
+    try {
+      // Construct the prompt for the AI, including data context
+      const fullPrompt = `User query: "${userMessage.text}".
+        Data Headers: ${dataHeaders.join(", ")}.
+        Data Summary: ${dataSummary}.
+        Please provide a concise response based on this context.`;
+
+      // Invoke the Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke("ai-handler", {
+        body: { prompt: fullPrompt },
+      });
+
+      if (error) {
+        console.error("Error invoking AI function:", error);
+        toast.error("Failed to get AI response: " + error.message);
+        const errorMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: "Sorry, I couldn't process that request. Please try again." };
+        setMessages((prev) => [...prev, errorMessage]);
+      } else {
+        const aiResponseText = data?.response || "No response from AI.";
+        const aiMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: aiResponseText };
+        setMessages((prev) => [...prev, aiMessage]);
+        toast.success("AI response received!");
+      }
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
+      toast.error("An unexpected error occurred: " + error.message);
+      const errorMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: "An unexpected error occurred. Please check the console for details." };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsThinking(false);
-      toast.success("AI response generated (simulated).");
-    }, 1500); // Simulate AI thinking time
-  };
-
-  const generateSimulatedAIResponse = (query: string, headers: string[], summary: string): string => {
-    const lowerQuery = query.toLowerCase();
-
-    if (lowerQuery.includes("hello") || lowerQuery.includes("hi")) {
-      return "Hello! How can I help you analyze your data today?";
     }
-    if (lowerQuery.includes("headers") || lowerQuery.includes("columns")) {
-      return `Your dataset has the following columns: ${headers.join(", ")}. What would you like to know about them?`;
-    }
-    if (lowerQuery.includes("summary") || lowerQuery.includes("overview")) {
-      return `Here's a simulated summary of your data: ${summary} For a deeper dive, please specify your area of interest.`;
-    }
-    if (lowerQuery.includes("trends")) {
-      return "Based on a simulated analysis, we observe a general upward trend in 'value1' over 'category'. Further investigation is needed for specific insights.";
-    }
-    if (lowerQuery.includes("visualize") || lowerQuery.includes("chart")) {
-      return "I can help you visualize data! Please use the 'Build Your Chart' section above to create interactive charts. What kind of chart are you interested in?";
-    }
-    if (lowerQuery.includes("thank you") || lowerQuery.includes("thanks")) {
-      return "You're welcome! Let me know if you have any more questions.";
-    }
-    return "I'm a demo AI and can provide simulated responses. For real-time, in-depth analysis using advanced AI models (like Claude/GPT-4), a backend integration is required. Please try asking about 'headers', 'summary', or 'trends'.";
   };
 
   return (
@@ -78,7 +78,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">AI Chat Assistant</CardTitle>
         <CardDescription className="text-center mt-2">
-          Ask questions about your data (simulated responses).
+          Ask questions about your data (powered by Supabase Edge Function).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col flex-grow p-4 pt-0">
@@ -89,7 +89,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
               <div className="bg-muted p-3 rounded-lg max-w-[80%] text-left">
                 <p className="text-sm">Hello! I'm your AI assistant. Ask me anything about your data (e.g., "What are the headers?", "Give me a summary").</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <span className="font-semibold text-destructive-foreground">Note:</span> This is a simulated AI. For real AI capabilities, a backend integration is needed.
+                  <span className="font-semibold text-destructive-foreground">Note:</span> This AI provides simulated responses from the Edge Function. For real AI capabilities, integrate with a large language model.
                 </p>
               </div>
             </div>
