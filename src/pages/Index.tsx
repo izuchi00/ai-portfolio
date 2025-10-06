@@ -15,7 +15,7 @@ const Index = () => {
         <h1 className="text-5xl md:text-6xl font-extrabold text-primary mb-6 leading-tight">
           Innovate with AI: Your Data, Our Intelligence
         </h1>
-        <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl">
+        <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl text-center mx-auto">
           Showcasing cutting-edge generative and agentic AI solutions for data processing, advanced analytics, and intelligent web scraping.
           Transform raw data into actionable insights and unlock new possibilities.
         </p>
