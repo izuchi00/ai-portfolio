@@ -4,7 +4,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import DesktopLayout from "./DesktopLayout"; // Import the new DesktopLayout
+import DesktopLayout from "./DesktopLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const MainLayout = () => {
@@ -18,7 +18,9 @@ const MainLayout = () => {
           <Outlet />
         </main>
       ) : (
-        <DesktopLayout />
+        <div className="flex-grow flex"> {/* Added flex-grow and flex to ensure DesktopLayout fills the space */}
+          <DesktopLayout />
+        </div>
       )}
       <Footer />
     </div>

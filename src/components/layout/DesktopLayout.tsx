@@ -48,8 +48,8 @@ const DesktopLayout: React.FC = () => {
         <Sidebar isCollapsed={isSidebarCollapsed} onCollapseToggle={handleCollapseToggle} />
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={100 - expandedSize}> {/* Adjust default size for main content */}
-        <main className="flex-grow container mx-auto p-4">
+      <ResizablePanel defaultSize={100 - expandedSize}>
+        <main className="h-full overflow-y-auto container mx-auto p-4"> {/* Added h-full and overflow-y-auto */}
           <Outlet />
         </main>
       </ResizablePanel>
