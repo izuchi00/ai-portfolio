@@ -13,54 +13,42 @@ serve(async (req) => {
   try {
     const { prompt } = await req.json();
 
-    // --- LLM Integration Placeholder ---
-    // IMPORTANT: Replace with your actual LLM API endpoint and API key.
-    // Example for OpenAI:
-    // const LLM_API_URL = "https://api.openai.com/v1/chat/completions";
-    // const LLM_API_KEY = Deno.env.get("OPENAI_API_KEY"); // Get from Supabase secrets
+    // --- OpenAI Integration ---
+    const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+    const OPENAI_API_KEY = Deno.env.get("LLM_API_KEY"); // Using LLM_API_KEY secret for OpenAI key
 
-    // For this example, we'll use a generic placeholder.
-    const LLM_API_URL = Deno.env.get("LLM_API_URL") || "https://api.example.com/llm-endpoint";
-    const LLM_API_KEY = Deno.env.get("LLM_API_KEY"); // Get from Supabase secrets
-
-    if (!LLM_API_KEY) {
-      return new Response(JSON.stringify({ error: "LLM_API_KEY not set in Supabase secrets." }), {
+    if (!OPENAI_API_KEY) {
+      return new Response(JSON.stringify({ error: "OPENAI_API_KEY (LLM_API_KEY) not set in Supabase secrets." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
 
-    const llmResponse = await fetch(LLM_API_URL, {
+    const openaiResponse = await fetch(OPENAI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${LLM_API_KEY}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        // This structure will vary based on your chosen LLM.
-        // For OpenAI Chat Completions, it might look like:
-        // model: "gpt-3.5-turbo",
-        // messages: [{ role: "user", content: prompt }],
-        // max_tokens: 500,
-        // temperature: 0.7,
-        prompt: prompt, // Generic prompt for demonstration
-        max_tokens: 100,
+        model: "gpt-3.5-turbo", // You can change this to "gpt-4o" or other models if you have access
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 500, // Limit the response length
+        temperature: 0.7, // Controls randomness (0.0 for deterministic, 1.0 for creative)
       }),
     });
 
-    if (!llmResponse.ok) {
-      const errorData = await llmResponse.json();
-      console.error("LLM API Error:", errorData);
-      return new Response(JSON.stringify({ error: `LLM API error: ${llmResponse.statusText} - ${JSON.stringify(errorData)}` }), {
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.json();
+      console.error("OpenAI API Error:", errorData);
+      return new Response(JSON.stringify({ error: `OpenAI API error: ${openaiResponse.statusText} - ${JSON.stringify(errorData)}` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: llmResponse.status,
+        status: openaiResponse.status,
       });
     }
 
-    const llmData = await llmResponse.json();
-    // Extract the actual AI response based on your LLM's output structure.
-    // For OpenAI Chat Completions, it might be: llmData.choices[0].message.content
-    const aiResponse = llmData.response || "No specific response from LLM (check LLM output structure).";
+    const openaiData = await openaiResponse.json();
+    const aiResponse = openaiData.choices[0]?.message?.content || "No specific response from OpenAI.";
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
