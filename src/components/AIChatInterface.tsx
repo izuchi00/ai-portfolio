@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, User } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase"; // Import the Supabase client
+// Removed: import { supabase } from "@/lib/supabase"; // Supabase client is no longer used
 
 interface Message {
   id: string;
@@ -47,17 +47,23 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
         Data Summary: ${dataSummary}.
         Please provide a concise response based on this context.`;
 
-      // Invoke the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke("ai-handler", {
-        body: { prompt: fullPrompt },
+      // Invoke the new Vercel API route
+      const response = await fetch('/api/ai-chat', { // Call the new Vercel API route
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: fullPrompt }),
       });
 
-      if (error) {
-        console.error("Error invoking AI function:", error);
-        toast.error("Failed to get AI response: " + error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error invoking AI function:", errorData);
+        toast.error("Failed to get AI response: " + (errorData.error || response.statusText));
         const errorMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: "Sorry, I couldn't process that request. Please try again." };
         setMessages((prev) => [...prev, errorMessage]);
       } else {
+        const data = await response.json();
         const aiResponseText = data?.response || "No response from AI.";
         const aiMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: aiResponseText };
         setMessages((prev) => [...prev, aiMessage]);
@@ -78,7 +84,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">AI Chat Assistant</CardTitle>
         <CardDescription className="text-center mt-2">
-          Ask questions about your data (powered by Supabase Edge Function).
+          Ask questions about your data (powered by Hugging Face via Vercel Function).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col flex-grow p-4 pt-0">
@@ -89,7 +95,7 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
               <div className="bg-muted p-3 rounded-lg max-w-[80%] text-left">
                 <p className="text-sm">Hello! I'm your AI assistant. Ask me anything about your data (e.g., "What are the headers?", "Give me a summary").</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <span className="font-semibold text-destructive-foreground">Note:</span> This AI provides simulated responses from the Edge Function. For real AI capabilities, integrate with a large language model.
+                  <span className="font-semibold text-destructive-foreground">Note:</span> This AI provides responses from Hugging Face via a Vercel Function.
                 </p>
               </div>
             </div>
