@@ -4,20 +4,27 @@ const HF_INFERENCE_API_URL = "https://api-inference.huggingface.co/models/";
 const HF_MODEL = "HuggingFaceH4/zephyr-7b-beta"; // You can change this to your preferred model
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS', // Explicitly allow POST and OPTIONS
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  // Set CORS headers for all responses
+  Object.entries(corsHeaders).forEach(([key, value]) => res.setHeader(key, value));
+
+  // Log the received request method for debugging
+  console.log("Received request method:", req.method);
+
   if (req.method === 'OPTIONS') {
     // Handle CORS preflight request
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(200).send('ok');
   }
 
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    // Log if a method other than POST is received for the main request
+    console.error("Method Not Allowed:", req.method);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
   try {
@@ -30,6 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const HF_API_KEY = process.env.HF_API_KEY; // This will be set in Vercel environment variables
 
     if (!HF_API_KEY) {
+      console.error("Hugging Face API Key (HF_API_KEY) not set.");
       return res.status(500).json({ error: 'Hugging Face API Key (HF_API_KEY) not set.' });
     }
 
@@ -55,7 +63,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const data = await response.json();
-    // Hugging Face Inference API often returns an array of objects
     const aiResponse = data[0]?.generated_text || "No specific response from Hugging Face.";
 
     return res.status(200).json({ response: aiResponse });
