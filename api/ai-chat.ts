@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const HF_INFERENCE_API_URL = "https://api-inference.huggingface.co/models/";
-const HF_MODEL = "distilgpt2"; // Changed to distilgpt2 for further testing
+const HF_MODEL = "gpt2"; // Changed to gpt2 for further testing
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const corsHeaders = {
@@ -46,8 +46,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     console.log(`HF_TOKEN length: ${HF_TOKEN.length > 0 ? 'Present (' + HF_TOKEN.length + ' chars)' : 'Empty'}`); // Log key length for debugging
 
-    console.log(`Calling Hugging Face Inference API with model: ${HF_MODEL}`);
-    const response = await fetch(`${HF_INFERENCE_API_URL}${HF_MODEL}`, {
+    const fullApiUrl = `${HF_INFERENCE_API_URL}${HF_MODEL}`;
+    console.log(`Calling Hugging Face Inference API at URL: ${fullApiUrl}`);
+    const response = await fetch(fullApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
