@@ -36,17 +36,17 @@ const About = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 p-6">
-          <div className="space-y-4 text-lg text-muted-foreground text-left">
-            <p>
+          <div className="space-y-4 text-lg text-muted-foreground">
+            <p className="text-center">
               Hello! I'm a passionate Computer Science graduate with a strong foundation in algorithms, data structures, and software development. My journey into the world of Artificial Intelligence has equipped me with expertise in both generative and agentic AI paradigms.
             </p>
-            <p>
+            <p className="text-center">
               I thrive on transforming complex data challenges into innovative solutions. My goal is to leverage AI to automate tedious tasks, extract meaningful insights from vast datasets, and build intelligent systems that drive efficiency and growth for businesses.
             </p>
-            <p>
+            <p className="text-center">
               I am particularly interested in roles that involve:
             </p>
-            <ul className="list-disc list-inside ml-4 space-y-1">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-left mx-auto max-w-prose">
               <li>Developing and deploying AI models for data analysis and prediction.</li>
               <li>Designing and implementing intelligent agents for automation and optimization.</li>
               <li>Building robust web scraping solutions for data acquisition.</li>
