@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const HF_INFERENCE_API_URL = "https://api-inference.huggingface.co/models/";
-const HF_MODEL = "gpt2"; // Changed to gpt2 for further testing
+const HF_MODEL = "microsoft/DialoGPT-medium"; // Changed to microsoft/DialoGPT-medium
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const corsHeaders = {
