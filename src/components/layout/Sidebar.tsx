@@ -74,26 +74,43 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onCollapseToggle }) => {
       </div>
       <nav className="flex-1 grid gap-1 p-2">
         {navItems.map((item) => (
-          <Tooltip key={item.name}>
-            <TooltipTrigger asChild>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  location.pathname === item.path
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground",
-                  isCollapsed ? "justify-center" : ""
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {!isCollapsed && item.name}
-                <span className="sr-only">{item.name}</span>
-              </Link>
-            </TooltipTrigger>
-            {isCollapsed && <TooltipContent side="right">{item.name}</TooltipContent>}
-          </Tooltip>
+          isCollapsed ? (
+            <Tooltip key={item.name}>
+              <TooltipTrigger asChild>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    location.pathname === item.path
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground",
+                    "justify-center" // Always center when collapsed
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="sr-only">{item.name}</span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.name}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Link
+              key={item.name}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                location.pathname === item.path
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "text-sidebar-foreground"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              {item.name}
+              <span className="sr-only">{item.name}</span>
+            </Link>
+          )
         ))}
       </nav>
     </div>
