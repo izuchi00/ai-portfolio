@@ -4,13 +4,14 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Brain, Bot, BarChart, FileText, Globe } from "lucide-react"; // Added Globe icon for Web Scraping
+import { Brain, Bot, BarChart, FileText, Globe } from "lucide-react";
+import SectionWrapper from "@/components/SectionWrapper"; // Import the new component
 
 const Index = () => {
   return (
     <div className="flex flex-col items-center justify-center text-center px-4 py-8">
       {/* Hero Section */}
-      <div className="flex flex-col items-center justify-center text-center px-4 py-8 flex-grow">
+      <SectionWrapper className="flex-grow"> {/* Use SectionWrapper */}
         <h1 className="text-5xl md:text-6xl font-extrabold text-primary mb-6 leading-tight">
           Innovate with AI: Your Data, Our Intelligence
         </h1>
@@ -30,7 +31,7 @@ const Index = () => {
             </Button>
           </Link>
         </div>
-      </div>
+      </SectionWrapper>
 
       {/* Our AI Approach Section */}
       <section className="w-full py-12 md:py-20 bg-muted/40">
