@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Brain, Bot, BarChart, FileText, Globe } from "lucide-react";
-import SectionWrapper from "@/components/SectionWrapper"; // Import the new component
+import SectionWrapper from "@/components/SectionWrapper";
 
 const Index = () => {
   return (
-    <div className="flex flex-col items-center justify-center text-center px-4 py-8">
+    <SectionWrapper className="space-y-12"> {/* Use SectionWrapper for the entire page content */}
       {/* Hero Section */}
-      <SectionWrapper className="flex-grow"> {/* Use SectionWrapper */}
+      <div> {/* This div now contains only the hero content */}
         <h1 className="text-5xl md:text-6xl font-extrabold text-primary mb-6 leading-tight">
           Innovate with AI: Your Data, Our Intelligence
         </h1>
@@ -31,7 +31,7 @@ const Index = () => {
             </Button>
           </Link>
         </div>
-      </SectionWrapper>
+      </div>
 
       {/* Our AI Approach Section */}
       <section className="w-full py-12 md:py-20 bg-muted/40">
@@ -94,7 +94,7 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </div>
+    </SectionWrapper>
   );
 };
 
