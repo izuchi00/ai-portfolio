@@ -38,11 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt is required.' });
     }
 
-    const HF_API_KEY = process.env.HF_API_KEY;
+    const LLM_API_KEY = process.env.LLM_API_KEY;
 
-    if (!HF_API_KEY) {
-      console.error("Hugging Face API Key (HF_API_KEY) not set in environment variables.");
-      return res.status(500).json({ error: 'Hugging Face API Key (HF_API_KEY) not set. Please configure it in Vercel environment variables.' });
+    if (!LLM_API_KEY) {
+      console.error("LLM API Key (LLM_API_KEY) not set in environment variables.");
+      return res.status(500).json({ error: 'LLM API Key (LLM_API_KEY) not set. Please configure it in Vercel environment variables.' });
     }
 
     console.log(`Calling Hugging Face Inference API with model: ${HF_MODEL}`);
@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${HF_API_KEY}`,
+        'Authorization': `Bearer ${LLM_API_KEY}`,
       },
       body: JSON.stringify({
         inputs: prompt,
