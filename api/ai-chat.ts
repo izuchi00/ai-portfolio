@@ -7,87 +7,95 @@ const corsHeaders = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers for all responses
-  Object.entries(corsHeaders).forEach(([key, value]) => res.setHeader(key, value));
+  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).send('ok');
-  }
-
+  if (req.method === 'OPTIONS') return res.status(200).send('ok');
   if (req.method !== 'POST') {
     return res.status(405).json({ error: `Method ${req.method} Not Allowed. Only POST requests are accepted.` });
   }
 
   try {
-    const { prompt } = req.body;
+    // Body may be string if client sent wrong headers; guard for that.
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const prompt = body?.prompt?.toString().trim();
+    if (!prompt) return res.status(400).json({ error: 'Prompt is required.' });
 
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required.' });
-    }
-
-    const HF_TOKEN = process.env.HF_TOKEN;
-    // Use HF_MODEL from environment variables, defaulting to a known-good public model
+    const HF_TOKEN = (process.env.HF_TOKEN || '').trim();
     const MODEL_ID = (process.env.HF_MODEL || 'HuggingFaceH4/zephyr-7b-beta').trim();
 
     if (!HF_TOKEN) {
-      return res.status(500).json({ error: 'Hugging Face API Token (HF_TOKEN) not set. Please configure it in Vercel environment variables.' });
+      return res.status(500).json({ error: 'HF_TOKEN not set in environment.' });
     }
 
-    // Reverted to the original Hugging Face Inference API endpoint for free models
-    const huggingFaceApiUrl = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
-    
-    const response = await fetch(huggingFaceApiUrl, {
+    const url = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
+    console.log('Calling HF model:', MODEL_ID, 'URL:', url);
+
+    const r = await fetch(url, {
       method: 'POST',
       headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${HF_TOKEN}`,
       },
       body: JSON.stringify({
         inputs: prompt,
         parameters: {
-          max_new_tokens: 256, // Adjusted max tokens
+          max_new_tokens: 256,
           temperature: 0.7,
-          do_sample: true, // Added do_sample for more varied responses
-          return_full_text: false, // Ensure only generated text is returned for chat models
+          do_sample: true,
+          return_full_text: false,
         },
-        options: {
-          wait_for_model: true,
-        },
+        options: { wait_for_model: true },
       }),
     });
 
-    const responseText = await response.text();
+    const text = await r.text();
 
-    if (!response.ok) {
-      let errorMessage = `Hugging Face API error (${response.status}): ${response.statusText}`;
+    // Normalize HF errors: r.status not OK → return 502 with details
+    if (!r.ok) {
+      let hfError: string;
       try {
-        const errorData = JSON.parse(responseText);
-        errorMessage = errorData.error?.message || JSON.stringify(errorData);
-      } catch (e) {
-        errorMessage = responseText || errorMessage;
+        const parsed = JSON.parse(text);
+        // HF often returns { error: "Model ... not found" } or { error: { message: "..." } }
+        hfError = typeof parsed?.error === 'string'
+          ? parsed.error
+          : parsed?.error?.message || text || r.statusText;
+      } catch {
+        hfError = text || r.statusText;
       }
-      console.error("Hugging Face API Error:", errorMessage);
-      return res.status(response.status).json({ error: `Failed to get AI response: Hugging Face API model not found or inaccessible. Model: ${MODEL_ID} - ${errorMessage}` });
+
+      // Common helpful hint for 404s
+      const hint = r.status === 404
+        ? `Check that the model "${MODEL_ID}" is public and served by the Hugging Face Inference API, or switch to a known-good model like "HuggingFaceH4/zephyr-7b-beta".`
+        : undefined;
+
+      return res.status(502).json({
+        error: 'Hugging Face request failed',
+        status: r.status,
+        model: MODEL_ID,
+        detail: hfError,
+        hint,
+      });
     }
 
-    if (responseText.trim().toLowerCase() === 'not found') {
-        return res.status(404).json({ error: `Hugging Face API returned 'Not Found' for model ${MODEL_ID}. This might indicate the model is unavailable or your token lacks specific permissions.` });
-    }
-
-    let data;
+    let data: any;
     try {
-        data = JSON.parse(responseText);
-    } catch (jsonError) {
-        console.error("Failed to parse JSON from Hugging Face response:", responseText, jsonError);
-        return res.status(500).json({ error: `Hugging Face API returned non-JSON response: ${responseText.substring(0, 200)}...` });
+      data = JSON.parse(text);
+    } catch (e) {
+      return res.status(500).json({ error: `HF returned non-JSON response`, sample: text.slice(0, 200) });
     }
-    
-    const aiResponse = data[0]?.generated_text || "No specific response from Hugging Face.";
 
-    return res.status(200).json({ response: aiResponse });
+    // Extract generated text from array or object
+    let answer: string | undefined;
+    if (Array.isArray(data)) {
+      answer = data[0]?.generated_text ?? data[0]?.text;
+    } else if (data && typeof data === 'object') {
+      answer = data.generated_text ?? data.text;
+    }
+    if (!answer) answer = 'No text generated.';
 
-  } catch (error: any) {
-    console.error("Vercel Function Internal Error:", error);
-    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+    return res.status(200).json({ response: answer, model: MODEL_ID });
+  } catch (err: any) {
+    console.error('Function error:', err);
+    return res.status(500).json({ error: err?.message || 'Internal Server Error' });
   }
 }
