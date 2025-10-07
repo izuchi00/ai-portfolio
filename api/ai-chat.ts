@@ -26,13 +26,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const HF_TOKEN = process.env.HF_TOKEN;
-    const HF_MODEL = "gpt2"; // Changed to a more basic, widely available model for testing
+    const HF_MODEL = "google/gemma-2b-it"; // Changed to a model served by an inference provider
 
     if (!HF_TOKEN) {
       return res.status(500).json({ error: 'Hugging Face API Token (HF_TOKEN) not set. Please configure it in Vercel environment variables.' });
     }
 
-    const huggingFaceApiUrl = `https://api-inference.huggingface.co/models/${HF_MODEL}`;
+    // Updated to the new Hugging Face Inference Providers endpoint
+    const huggingFaceApiUrl = `https://router.huggingface.co/hf-inference/${HF_MODEL}`;
     
     const response = await fetch(huggingFaceApiUrl, {
       method: 'POST',
