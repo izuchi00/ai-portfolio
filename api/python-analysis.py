@@ -12,9 +12,21 @@ from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
+from flask import Flask, request, jsonify
 
 # Set Matplotlib backend to 'Agg' for non-interactive plotting
 plt.switch_backend('Agg')
+
+app = Flask(__name__)
+
+# CORS headers for Flask
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
+
+app.after_request(add_cors_headers)
 
 def generate_plot_base64(fig):
     """Converts a matplotlib figure to a base64 encoded PNG string."""
@@ -23,25 +35,19 @@ def generate_plot_base64(fig):
     buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-def handler(request, response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-
+@app.route('/', methods=['POST', 'OPTIONS'])
+def handle_analysis_request():
     if request.method == "OPTIONS":
-        return response.status(200).send("ok")
-
-    if request.method != "POST":
-        return response.status(405).json({"error": f"Method {request.method} Not Allowed. Only POST requests are accepted."})
+        return jsonify({"message": "ok"}), 200
 
     try:
-        body = json.loads(request.body)
+        body = request.json
         data = body.get('data')
         headers = body.get('headers')
         analysis_type = body.get('analysisType')
 
         if not data or not headers or not analysis_type:
-            return response.status(400).json({"error": "Missing data, headers, or analysisType in request body."})
+            return jsonify({"error": "Missing data, headers, or analysisType in request body."}), 400
 
         df = pd.DataFrame(data)
 
@@ -215,8 +221,12 @@ def handler(request, response):
         else:
             results["report_text"] = "Unknown analysis type or analysis not yet implemented in Python backend."
 
-        return response.status(200).json(results)
+        return jsonify(results), 200
 
     except Exception as e:
         print(f"Python function error: {e}")
-        return response.status(500).json({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
+
+# This is for local development if you run `python python-analysis.py` directly
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=3000)

@@ -57,7 +57,7 @@ Perform an exploratory data analysis (EDA) covering:
 1.  **Summary Statistics**: Provide descriptive statistics for numerical columns (mean, median, std, min, max).
 2.  **Feature Distributions**: Describe the distributions of key numerical features using histograms and density plots.
 3.  **Correlation Matrix**: Explain the correlation between numerical variables using a heatmap and interpret significant correlations.
-4.  **Relationship between Key Features**: Describe scatter plots to visualize relationships between important pairs of features (e.g., Age vs Spending Score, Annual Income vs Spending Score), potentially colored by a categorical variable like Gender.
+3.  **Relationship between Key Features**: Describe scatter plots to visualize relationships between important pairs of features (e.g., Age vs Spending Score, Annual Income vs Spending Score), potentially colored by a categorical variable like Gender.
 5.  **Pair Plots**: Describe how pair plots would show relationships between all numerical variables.
 6.  **Group Comparisons**: Analyze and describe comparisons of key metrics (e.g., Spending Score) across different groups (e.g., Gender, Age Range, Income Group).
 `;
@@ -161,8 +161,8 @@ Generate a simulated traffic acquisition report. This analysis typically require
 
     let aiResponseText = "No AI response generated.";
     let providerUsed = "none";
-    let hfCandidates: string[] = []; // Declared in a higher scope
-    let hfResult: any = null; // Declared in a higher scope
+    let hfCandidates: string[] = []; // Declared here
+    let hfResult: any = null; // Declared here
 
     // --- Attempt to use Groq API first ---
     if (GROQ_API_KEY) {

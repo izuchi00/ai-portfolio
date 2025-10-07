@@ -5,10 +5,9 @@
   ],
   "functions": {
     "api/python-analysis.py": {
-      "runtime": "vercel-python@3.0.0",
+      "runtime": "docker",
       "memory": 1024,
-      "maxDuration": 30,
-      "includeFiles": ["requirements.txt"]
+      "maxDuration": 30
     }
   }
 }
