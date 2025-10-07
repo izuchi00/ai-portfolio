@@ -7,7 +7,7 @@
     "api/ai-chat.ts": {
       "runtime": "node@20.x"
     },
-    "api/python-analysis/**": {
+    "api/python-analysis": {
       "runtime": "docker",
       "memory": 1024,
       "maxDuration": 30
