@@ -4,7 +4,7 @@
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/python-analysis.py": {
+    "api/**": {
       "runtime": "docker",
       "memory": 1024,
       "maxDuration": 30
