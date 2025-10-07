@@ -8,8 +8,7 @@
       "runtime": "vercel-python@3.0.0",
       "memory": 1024,
       "maxDuration": 30,
-      "includeFiles": ["requirements.txt"],
-      "handler": "python-analysis.py"
+      "includeFiles": ["requirements.txt"]
     }
   }
 }
