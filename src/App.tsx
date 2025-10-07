@@ -15,6 +15,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
 const DataUpload = lazy(() => import("./pages/DataUpload"));
 const TextAnalysis = lazy(() => import("./pages/TextAnalysis"));
+const Templates = lazy(() => import("./pages/Templates")); // Import the new Templates page
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Index />} />
+              <Route path="templates" element={<Templates />} /> {/* New Templates route */}
               <Route path="upload-data" element={<DataUpload />} />
               <Route path="data-analysis" element={<DataAnalysis />} />
               <Route path="text-analysis" element={<TextAnalysis />} />

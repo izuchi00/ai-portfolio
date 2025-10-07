@@ -14,37 +14,29 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 
 const DataAnalysis = () => {
   const location = useLocation();
-  const { parsedData: initialParsedData, dataHeaders: initialDataHeaders } = (location.state || {}) as {
+  const { parsedData: initialParsedData, dataHeaders: initialDataHeaders, analysisType: initialAnalysisType } = (location.state || {}) as {
     parsedData?: Record<string, string>[];
     dataHeaders?: string[];
+    analysisType?: string; // New: analysisType from Templates page
   };
 
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
   const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
   const [parsedData, setParsedData] = useState<Record<string, any>[]>(initialParsedData || []);
   const [dataHeaders, setDataHeaders] = useState<string[]>(initialDataHeaders || []);
-  const [analysisReport, setAnalysisReport] = useState<string | null>(null); // New state for the full analysis report
+  const [analysisReport, setAnalysisReport] = useState<string | null>(null);
 
   const [selectedChartType, setSelectedChartType] = useState<string>("");
   const [selectedXAxis, setSelectedXAxis] = useState<string>("");
   const [selectedYAxis, setSelectedYAxis] = useState<string>("");
   const [currentChart, setCurrentChart] = useState<{ type: string; xAxis: string; yAxis: string } | null>(null);
 
+  // Effect to load data and potentially trigger analysis
   useEffect(() => {
-    if (initialParsedData && initialParsedData.length > 0) {
-      showSuccess("Data loaded for analysis!");
-      // Convert string values to numbers for charting if possible
-      const numericParsedData = initialParsedData.map(row => {
-        const newRow: Record<string, any> = {};
-        for (const key in row) {
-          const value = row[key];
-          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
-        }
-        return newRow;
-      });
-      setParsedData(numericParsedData);
-      setDataHeaders(initialDataHeaders || []);
-    } else {
+    let dataToUse = initialParsedData;
+    let headersToUse = initialDataHeaders;
+
+    if (!dataToUse || dataToUse.length === 0) {
       // If no data is passed, provide a dummy dataset for demo purposes
       const dummyData = [
         { id: 1, category: "Electronics", sales: 100, profit: 20, region: "East" },
@@ -56,17 +48,39 @@ const DataAnalysis = () => {
         { id: 7, category: "Electronics", sales: 110, profit: 21, region: "North" },
         { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
       ];
-      setParsedData(dummyData);
-      setDataHeaders(["id", "category", "sales", "profit", "region"]);
+      dataToUse = dummyData;
+      headersToUse = ["id", "category", "sales", "profit", "region"];
       setSelectedChartType("BarChart");
       setSelectedXAxis("category");
       setSelectedYAxis("sales");
       setCurrentChart({ type: "BarChart", xAxis: "category", yAxis: "sales" });
     }
-  }, [initialParsedData, initialDataHeaders]);
 
-  const handlePerformAnalysis = async (analysisType: string) => {
-    if (parsedData.length === 0) {
+    // Convert string values to numbers for charting if possible
+    const numericParsedData = dataToUse.map(row => {
+      const newRow: Record<string, any> = {};
+      for (const key in row) {
+        const value = row[key];
+        newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
+      }
+      return newRow;
+    });
+    setParsedData(numericParsedData);
+    setDataHeaders(headersToUse || []);
+
+    if (initialParsedData && initialParsedData.length > 0) {
+      showSuccess("Data loaded for analysis!");
+    }
+
+    // Automatically trigger analysis if an analysisType is provided from Templates page
+    if (initialAnalysisType && numericParsedData.length > 0) {
+      handlePerformAnalysis(initialAnalysisType, numericParsedData, headersToUse || []);
+    }
+  }, [initialParsedData, initialDataHeaders, initialAnalysisType]);
+
+
+  const handlePerformAnalysis = async (analysisType: string, currentData: Record<string, any>[], currentHeaders: string[]) => {
+    if (currentData.length === 0) {
       showError("No data available for analysis. Please upload a file first.");
       return;
     }
@@ -80,7 +94,7 @@ const DataAnalysis = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ data: parsedData, headers: dataHeaders, analysisType }),
+        body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
       });
 
       if (!response.ok) {
@@ -90,7 +104,7 @@ const DataAnalysis = () => {
       } else {
         const result = await response.json();
         setAnalysisReport(result.report);
-        showSuccess(`AI ${analysisType} analysis complete!`);
+        showSuccess(`AI ${analysisType.replace(/_/g, ' ')} analysis complete!`);
       }
     } catch (error: any) {
       console.error("Unexpected error during AI analysis:", error);
@@ -279,36 +293,7 @@ const DataAnalysis = () => {
                 )}
               </div>
 
-              <div className="space-y-4 mt-8">
-                <h3 className="text-xl font-semibold">Complete AI Analysis Options:</h3>
-                <p className="text-md text-muted-foreground font-medium">
-                  Select an analysis type to generate a comprehensive AI report.
-                </p>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <Button
-                    size="lg"
-                    onClick={() => handlePerformAnalysis("basic")}
-                    disabled={isLoadingAnalysis}
-                  >
-                    {isLoadingAnalysis ? <LoadingSpinner size={16} className="mr-2" /> : "Basic Analysis"}
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={() => handlePerformAnalysis("clustering")}
-                    disabled={isLoadingAnalysis}
-                  >
-                    {isLoadingAnalysis ? <LoadingSpinner size={16} className="mr-2" /> : "Advanced Clustering"}
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={() => handlePerformAnalysis("association")}
-                    disabled={isLoadingAnalysis}
-                  >
-                    {isLoadingAnalysis ? <LoadingSpinner size={16} className="mr-2" /> : "Association Rules"}
-                  </Button>
-                </div>
-              </div>
-
+              {/* Removed the old analysis buttons, as selection now happens on Templates page */}
               {isLoadingAnalysis && (
                 <div className="flex items-center justify-center space-x-2 text-primary mt-8">
                   <LoadingSpinner size={20} />

@@ -19,6 +19,7 @@ import {
   Mail,
   ChevronRight,
   ChevronLeft,
+  LayoutGrid, // New icon for Templates
 } from "lucide-react";
 
 interface NavItem {
@@ -29,6 +30,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
+  { name: "Templates", path: "/templates", icon: LayoutGrid }, // Added Templates link
   { name: "Upload Data", path: "/upload-data", icon: UploadCloud },
   { name: "Data Analysis", path: "/data-analysis", icon: BarChart2 },
   { name: "Text Analysis", path: "/text-analysis", icon: FileText },
