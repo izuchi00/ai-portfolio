@@ -5,7 +5,7 @@
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/ai-chat.ts": { "runtime": "nodejs@20.x" },
-    "api/data-analysis.ts": { "runtime": "nodejs@20.x" }
+    "api/ai-chat.ts": { "runtime": "nodejs20.x" },
+    "api/data-analysis.ts": { "runtime": "nodejs20.x" }
   }
 }
