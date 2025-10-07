@@ -23,12 +23,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const GROQ_API_KEY = (process.env.GROQ_API_KEY || '').trim();
-    const HF_TOKEN = (process.env.HF_TOKEN || '').trim();
-    const PREFERRED_HF_MODEL = (process.env.HF_MODEL || '').trim();
 
-    // Declare these variables at a higher scope to avoid "Cannot find name" errors
-    let hfCandidates: string[] = [];
-    let hfResult: any = null;
+    if (!GROQ_API_KEY) {
+      return res.status(500).json({ error: 'GROQ_API_KEY not set in environment.' });
+    }
 
     // Prepare a concise data summary for the LLM
     const dataSample = JSON.stringify(data.slice(0, 5), null, 2); // First 5 rows
@@ -166,82 +164,34 @@ Generate a simulated traffic acquisition report. This analysis typically require
     let aiResponseText = "No AI response generated.";
     let providerUsed = "none";
     
-    // --- Attempt to use Groq API first ---
-    if (GROQ_API_KEY) {
-      try {
-        const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${GROQ_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.7,
-            max_tokens: 2048 // Increased max_tokens for detailed reports
-          })
-        });
-
-        const groqData = await groqResponse.json();
-
-        if (!groqResponse.ok) {
-          console.error('Groq API request failed for data analysis:', groqResponse.status, groqData);
-        } else {
-          aiResponseText = groqData.choices?.[0]?.message?.content ?? 'No text generated from Groq.';
-          providerUsed = 'groq';
-        }
-      } catch (groqError: any) {
-        console.error('Error calling Groq API for data analysis:', groqError);
-      }
-    } else {
-      console.warn('GROQ_API_KEY not set for data analysis, falling back to Hugging Face.');
-    }
-
-    // --- Fallback to Hugging Face API if Groq failed or not configured ---
-    if (providerUsed === 'none' && HF_TOKEN) {
-      hfCandidates = [PREFERRED_HF_MODEL, 'google/flan-t5-small', 'sshleifer/tiny-gpt2'].filter(Boolean);
-
-      async function callHF(modelId: string, currentPrompt: string) {
-        const url = `https://api-inference.huggingface.co/models/${modelId}`;
-        const r = await fetch(url, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${HF_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({
-            inputs: currentPrompt,
-            parameters: { max_new_tokens: 512, do_sample: true, return_full_text: false }, // Adjusted max_new_tokens
-            options: { wait_for_model: true }
-          })
-        });
-        const text = await r.text();
-        return { ok: r.ok, status: r.status, text, modelId };
-      }
-
-      for (const m of hfCandidates) {
-        hfResult = await callHF(m, prompt);
-        console.log('HF status for data analysis:', hfResult.status, 'model:', m, 'sample:', hfResult.text.slice(0, 120));
-        if (hfResult.ok) {
-          let data: any;
-          try {
-            data = JSON.parse(hfResult.text);
-          } catch (e) {
-            console.error(`Failed to parse JSON from HF model ${m} for data analysis:`, hfResult.text.slice(0, 200));
-            continue;
-          }
-          aiResponseText = Array.isArray(data) ? (data[0]?.generated_text ?? data[0]?.text) : (data.generated_text ?? data.text);
-          providerUsed = 'huggingface';
-          break; // Exit loop on first successful HF response
-        }
-      }
-    }
-
-    if (providerUsed === 'none') {
-      return res.status(502).json({
-        error: 'All AI providers failed to generate a data analysis report.',
-        tried: (GROQ_API_KEY ? ['groq'] : []).concat(HF_TOKEN ? hfCandidates : []),
-        lastHFStatus: hfResult?.status,
-        lastHFBodySample: hfResult?.text?.slice(0, 200)
+    // --- Use Groq API ---
+    try {
+      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 2048 // Increased max_tokens for detailed reports
+        })
       });
+
+      const groqData = await groqResponse.json();
+
+      if (!groqResponse.ok) {
+        console.error('Groq API request failed for data analysis:', groqResponse.status, groqData);
+        return res.status(groqResponse.status).json({ error: groqData.error?.message || 'Groq API request failed for data analysis.' });
+      } else {
+        aiResponseText = groqData.choices?.[0]?.message?.content ?? 'No text generated from Groq.';
+        providerUsed = 'groq';
+      }
+    } catch (groqError: any) {
+      console.error('Error calling Groq API for data analysis:', groqError);
+      return res.status(500).json({ error: groqError?.message || 'Internal Server Error during Groq API call for data analysis.' });
     }
 
     return res.status(200).json({ report: aiResponseText, provider: providerUsed });
