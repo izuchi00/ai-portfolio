@@ -5,13 +5,13 @@ import base64
 import io
 import matplotlib.pyplot as plt
 import seaborn as sns
-# Removed: from sklearn.preprocessing import StandardScaler
-# Removed: from sklearn.cluster import KMeans
-# Removed: from sklearn.metrics import silhouette_score
-# Removed: from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
-# Removed: from sklearn.cluster import AgglomerativeClustering
-# Removed: from sklearn.cluster import DBSCAN
-# Removed: from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 
 # Set Matplotlib backend to 'Agg' for non-interactive plotting
 plt.switch_backend('Agg')
@@ -142,7 +142,7 @@ def handler(request, response):
 
         elif analysis_type == "anomaly_detection":
             if len(numeric_cols) >= 1:
-                # Simple Z-score based anomaly detection using pandas/numpy
+                # Simple Z-score based anomaly detection
                 anomalies = {}
                 for col in numeric_cols:
                     mean = df[col].mean()
@@ -167,15 +167,40 @@ def handler(request, response):
                 results["report_text"] = "No numeric columns available for anomaly detection."
 
         elif analysis_type == "clustering":
-            # This is now a simulated report as scikit-learn is removed
-            results["report_text"] = (
-                "**Clustering Analysis Report (Simulated):**\n\n"
-                "1. **Data Standardization:** For real clustering, numerical features would typically be standardized.\n"
-                "2. **K-Means Clustering:** Algorithms like K-Means would be applied to segment data into groups. The optimal number of clusters is usually determined using methods like the Elbow Method or Silhouette Score.\n"
-                "3. **Cluster Profile:** A real report would provide mean values for each feature within the clusters, outlining the characteristics of each segment.\n"
-                "4. **Visualization:** Visualizations like scatter plots would show data points colored by their assigned cluster.\n"
-                "5. **Insights:** This segmentation can reveal distinct customer groups or data patterns, useful for targeted strategies. (Actual clustering results would be displayed here if fully implemented with scikit-learn)."
-            )
+            if len(numeric_cols) >= 2:
+                # Standardize data
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(df[numeric_cols].dropna())
+
+                # K-Means Clustering (simplified for demo)
+                if X_scaled.shape[0] > 1: # Ensure enough samples for clustering
+                    kmeans = KMeans(n_clusters=3, random_state=42, n_init=10) # Assume 3 clusters for demo
+                    clusters = kmeans.fit_predict(X_scaled)
+                    df_clustered = df[numeric_cols].dropna().copy()
+                    df_clustered['Cluster'] = clusters
+
+                    cluster_profile = df_clustered.groupby('Cluster').mean().to_dict()
+                    results["cluster_profile"] = cluster_profile
+
+                    # Generate scatter plot of clusters
+                    fig, ax = plt.subplots(figsize=(8, 6))
+                    sns.scatterplot(x=df_clustered[numeric_cols[0]], y=df_clustered[numeric_cols[1]], hue=df_clustered['Cluster'], palette='viridis', ax=ax)
+                    ax.set_title(f'K-Means Clusters: {numeric_cols[0]} vs {numeric_cols[1]}')
+                    results["plot_base64"] = generate_plot_base64(fig)
+                    plt.close(fig)
+
+                    results["report_text"] = (
+                        "**Clustering Analysis Report (K-Means):**\n\n"
+                        "1. **Data Standardization:** Numerical features were standardized to ensure equal weighting.\n"
+                        "2. **K-Means Clustering:** Applied K-Means with 3 clusters (for demonstration). The optimal number of clusters would typically be determined using methods like the Elbow Method or Silhouette Score.\n"
+                        "3. **Cluster Profile:** Mean values for each feature within the clusters are provided below, outlining the characteristics of each segment.\n"
+                        "4. **Visualization:** A scatter plot shows the data points colored by their assigned cluster, illustrating the segmentation.\n"
+                        "5. **Insights:** This segmentation can reveal distinct customer groups or data patterns, useful for targeted strategies."
+                    )
+                else:
+                    results["report_text"] = "Not enough data points or numeric columns for clustering analysis."
+            else:
+                results["report_text"] = "Not enough numeric columns for clustering analysis. Please ensure your dataset has at least two numeric columns."
 
         elif analysis_type == "association":
             # This is a complex analysis, providing a simplified simulation

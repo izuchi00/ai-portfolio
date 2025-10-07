@@ -2,5 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     { "source": "/((?!api).*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/python-analysis.py": {
+      "runtime": "vercel-python@3.0.0",
+      "memory": 1024,
+      "maxDuration": 30,
+      "includeFiles": ["requirements.txt"],
+      "handler": "python-analysis.py"
+    }
+  }
 }
