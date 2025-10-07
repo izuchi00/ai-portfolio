@@ -7,10 +7,10 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the function handler
-COPY python-analysis.py .
+COPY index.py .
 
 # Expose port 3000 as required by Vercel for Docker runtime
 EXPOSE 3000
 
-# Command to run Gunicorn, serving the Flask app from 'python-analysis.py'
-CMD ["gunicorn", "--bind", "0.0.0.0:3000", "python-analysis:app"]
+# Command to run Gunicorn, serving the Flask app from 'index.py'
+CMD ["gunicorn", "--bind", "0.0.0.0:3000", "index:app"]
