@@ -49,6 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const text = await r.text();
+    console.log('HF status:', r.status, 'model:', MODEL_ID, 'sample:', text.slice(0,120)); // Added logging
 
     // Normalize HF errors: r.status not OK → return 502 with details
     if (!r.ok) {
