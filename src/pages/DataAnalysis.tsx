@@ -4,12 +4,13 @@ import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { showSuccess, showError } from "@/utils/toast"; // Import toast utility functions
+import { showSuccess, showError } from "@/utils/toast";
 import ChartBuilder from "@/components/ChartBuilder";
 import ChartDisplay from "@/components/ChartDisplay";
 import DataTablePreview from "@/components/DataTablePreview";
 import AIChatInterface from "@/components/AIChatInterface";
-import DataTransformation from "@/components/DataTransformation"; // Import DataTransformation
+import DataTransformation from "@/components/DataTransformation";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const DataAnalysis = () => {
   const location = useLocation();
@@ -18,11 +19,11 @@ const DataAnalysis = () => {
     dataHeaders?: string[];
   };
 
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
   const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
   const [parsedData, setParsedData] = useState<Record<string, any>[]>(initialParsedData || []);
   const [dataHeaders, setDataHeaders] = useState<string[]>(initialDataHeaders || []);
+  const [analysisReport, setAnalysisReport] = useState<string | null>(null); // New state for the full analysis report
 
   const [selectedChartType, setSelectedChartType] = useState<string>("");
   const [selectedXAxis, setSelectedXAxis] = useState<string>("");
@@ -46,43 +47,57 @@ const DataAnalysis = () => {
     } else {
       // If no data is passed, provide a dummy dataset for demo purposes
       const dummyData = [
-        { category: "A", value1: 10, value2: 20, value3: null },
-        { category: "B", value1: 15, value2: 25, value3: 5 },
-        { category: "C", value1: 7, value2: 18, value3: 10 },
-        { category: "D", value1: 20, value2: 30, value3: null },
-        { category: "E", value1: 12, value2: 22, value3: 15 },
+        { id: 1, category: "Electronics", sales: 100, profit: 20, region: "East" },
+        { id: 2, category: "Clothing", sales: 150, profit: 25, region: "West" },
+        { id: 3, category: "Electronics", sales: 70, profit: 18, region: "North" },
+        { id: 4, category: "Books", sales: 200, profit: 30, region: "South" },
+        { id: 5, category: "Clothing", sales: 120, profit: 22, region: "East" },
+        { id: 6, category: "Books", sales: 90, profit: 15, region: "West" },
+        { id: 7, category: "Electronics", sales: 110, profit: 21, region: "North" },
+        { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
       ];
       setParsedData(dummyData);
-      setDataHeaders(["category", "value1", "value2", "value3"]);
+      setDataHeaders(["id", "category", "sales", "profit", "region"]);
       setSelectedChartType("BarChart");
       setSelectedXAxis("category");
-      setSelectedYAxis("value1");
-      setCurrentChart({ type: "BarChart", xAxis: "category", yAxis: "value1" });
+      setSelectedYAxis("sales");
+      setCurrentChart({ type: "BarChart", xAxis: "category", yAxis: "sales" });
     }
   }, [initialParsedData, initialDataHeaders]);
 
-  const handleAnalyze = () => {
+  const handlePerformAnalysis = async (analysisType: string) => {
     if (parsedData.length === 0) {
-      showError("No data available for analysis.");
+      showError("No data available for analysis. Please upload a file first.");
       return;
     }
 
     setIsLoadingAnalysis(true);
-    setAnalysisResult(null);
+    setAnalysisReport(null);
 
-    // Simulate API call for data analysis
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/data-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: parsedData, headers: dataHeaders, analysisType }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error performing AI analysis:", errorData);
+        showError("Failed to get AI analysis: " + (errorData.error || response.statusText));
+      } else {
+        const result = await response.json();
+        setAnalysisReport(result.report);
+        showSuccess(`AI ${analysisType} analysis complete!`);
+      }
+    } catch (error: any) {
+      console.error("Unexpected error during AI analysis:", error);
+      showError("An unexpected error occurred during analysis: " + error.message);
+    } finally {
       setIsLoadingAnalysis(false);
-      setAnalysisResult(
-        `Demo AI Analysis for your dataset (${parsedData.length} rows):\n\n` +
-        "Summary: Our AI identified key trends and patterns. For a full, in-depth analysis, " +
-        "including advanced cleaning, custom visualizations, and detailed reports, " +
-        "please contact us to discuss our services.\n\n" +
-        "Key Metrics: (Demo) Average of Y-Axis: 42, Max: 99, Min: 1, Count: 1000.\n" +
-        "Recommendations: (Demo) Consider focusing on 'category B' for higher 'value2'."
-      );
-      showSuccess("Demo analysis complete!");
-    }, 2000); // Simulate a 2-second analysis time
+    }
   };
 
   const handleBuildChart = (chartType: string, xAxis: string, yAxis: string) => {
@@ -265,19 +280,46 @@ const DataAnalysis = () => {
               </div>
 
               <div className="space-y-4 mt-8">
-                <h3 className="text-xl font-semibold">AI Analysis:</h3>
-                <p className="text-md text-destructive-foreground font-medium">
-                  For complete analysis, advanced cleaning, custom visualizations, and in-depth reports, please inquire about our services.
+                <h3 className="text-xl font-semibold">Complete AI Analysis Options:</h3>
+                <p className="text-md text-muted-foreground font-medium">
+                  Select an analysis type to generate a comprehensive AI report.
                 </p>
-                <Button size="lg" onClick={handleAnalyze} disabled={isLoadingAnalysis}>
-                  {isLoadingAnalysis ? "Analyzing..." : "Run AI Analysis (Demo)"}
-                </Button>
+                <div className="flex flex-wrap justify-center gap-4">
+                  <Button
+                    size="lg"
+                    onClick={() => handlePerformAnalysis("basic")}
+                    disabled={isLoadingAnalysis}
+                  >
+                    {isLoadingAnalysis ? <LoadingSpinner size={16} className="mr-2" /> : "Basic Analysis"}
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={() => handlePerformAnalysis("clustering")}
+                    disabled={isLoadingAnalysis}
+                  >
+                    {isLoadingAnalysis ? <LoadingSpinner size={16} className="mr-2" /> : "Advanced Clustering"}
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={() => handlePerformAnalysis("association")}
+                    disabled={isLoadingAnalysis}
+                  >
+                    {isLoadingAnalysis ? <LoadingSpinner size={16} className="mr-2" /> : "Association Rules"}
+                  </Button>
+                </div>
               </div>
 
-              {analysisResult && (
+              {isLoadingAnalysis && (
+                <div className="flex items-center justify-center space-x-2 text-primary mt-8">
+                  <LoadingSpinner size={20} />
+                  <span>Generating AI analysis report...</span>
+                </div>
+              )}
+
+              {analysisReport && (
                 <div className="mt-8 p-4 border rounded-md bg-muted text-left whitespace-pre-wrap">
-                  <h4 className="text-xl font-semibold mb-2">Demo AI Analysis Result:</h4>
-                  <p className="text-muted-foreground">{analysisResult}</p>
+                  <h4 className="text-xl font-semibold mb-2">AI Analysis Report:</h4>
+                  <p className="text-muted-foreground">{analysisReport}</p>
                 </div>
               )}
 
