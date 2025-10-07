@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const HF_TOKEN = process.env.HF_TOKEN;
-    const HF_MODEL = "google/gemma-2b-it"; // Using a free-tier Hugging Face model
+    const HF_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"; // Using a widely accessible free-tier Hugging Face model
 
     if (!HF_TOKEN) {
       return res.status(500).json({ error: 'Hugging Face API Token (HF_TOKEN) not set. Please configure it in Vercel environment variables.' });
@@ -55,7 +55,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error("Hugging Face API Error:", errorData);
-      return res.status(response.status).json({ error: errorData.error?.message || `Hugging Face API model not found or inaccessible. Model: ${HF_MODEL} - ${response.statusText}` });
+      // Attempt to parse errorData, but fallback to responseText if it's not JSON
+      const errorMessage = errorData.error?.message || response.statusText || "Unknown Hugging Face API error.";
+      return res.status(response.status).json({ error: `Hugging Face API model not found or inaccessible. Model: ${HF_MODEL} - ${errorMessage}` });
     }
 
     const data = await response.json();
