@@ -26,6 +26,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const HF_TOKEN = (process.env.HF_TOKEN || '').trim();
     const PREFERRED_HF_MODEL = (process.env.HF_MODEL || '').trim();
 
+    // Declare these variables at a higher scope to avoid "Cannot find name" errors
+    let hfCandidates: string[] = [];
+    let hfResult: any = null;
+
     // Prepare a concise data summary for the LLM
     const dataSample = JSON.stringify(data.slice(0, 5), null, 2); // First 5 rows
     const dataOverview = `Dataset has ${data.length} rows and ${headers.length} columns. Headers: ${headers.join(', ')}. Sample data:\n${dataSample}`;
@@ -161,9 +165,7 @@ Generate a simulated traffic acquisition report. This analysis typically require
 
     let aiResponseText = "No AI response generated.";
     let providerUsed = "none";
-    let hfCandidates: string[] = []; // Declared here
-    let hfResult: any = null; // Declared here
-
+    
     // --- Attempt to use Groq API first ---
     if (GROQ_API_KEY) {
       try {

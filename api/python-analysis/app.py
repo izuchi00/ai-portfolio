@@ -13,6 +13,7 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 from flask import Flask, request, jsonify
+import os # Import os to access environment variables
 
 # Set Matplotlib backend to 'Agg' for non-interactive plotting
 plt.switch_backend('Agg')
@@ -35,7 +36,7 @@ def generate_plot_base64(fig):
     buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-@app.route('/', methods=['POST', 'OPTIONS'])
+@app.route('/api/python-analysis', methods=['POST', 'OPTIONS']) # Updated route path
 def handle_analysis_request():
     if request.method == "OPTIONS":
         return jsonify({"message": "ok"}), 200
@@ -227,6 +228,6 @@ def handle_analysis_request():
         print(f"Python function error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# This is for local development if you run `python python-analysis.py` directly
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=3000)
+    port = int(os.environ.get("PORT", 3000)) # Use PORT environment variable
+    app.run(host="0.0.0.0", port=port, debug=True)
