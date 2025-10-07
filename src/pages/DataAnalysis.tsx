@@ -24,7 +24,7 @@ const DataAnalysis = () => {
   const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
   const [parsedData, setParsedData] = useState<Record<string, any>[]>([]);
   const [dataHeaders, setDataHeaders] = useState<string[]>([]);
-  const [analysisReport, setAnalysisReport] = useState<string | { summary_stats?: object; report_text?: string; plot_base64?: string; cluster_profile?: object; correlation_matrix?: object; anomaly_detection_summary?: object; association_rules?: object; } | null>(null);
+  const [analysisReport, setAnalysisReport] = useState<string | null>(null); // Simplified to string
 
   const [selectedChartType, setSelectedChartType] = useState<string>("");
   const [selectedXAxis, setSelectedXAxis] = useState<string>("");
@@ -100,50 +100,24 @@ const DataAnalysis = () => {
     setIsLoadingAnalysis(true);
     setAnalysisReport(null); // Clear previous report
 
-    const pythonAnalysisTypes = [
-      "data_preparation", "exploratory_analysis", "data_visualization",
-      "correlation_analysis", "anomaly_detection", "clustering", "association"
-    ];
-
     try {
-      if (pythonAnalysisTypes.includes(analysisType)) {
-        // Call Python backend for actual data analysis
-        const response = await fetch('/api/python-analysis', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
-        });
+      // All analysis types will now go through the LLM backend for descriptive reports
+      const response = await fetch('/api/data-analysis', { // This is the LLM endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Error performing Python analysis:", errorData);
-          showError("Failed to get Python analysis: " + (errorData.error || response.statusText));
-        } else {
-          const result = await response.json();
-          setAnalysisReport(result); // Python backend returns an object
-          showSuccess(`Python-powered ${analysisType.replace(/_/g, ' ')} analysis complete!`);
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error performing AI analysis:", errorData);
+        showError("Failed to get AI analysis: " + (errorData.error || response.statusText));
       } else {
-        // Call LLM backend for descriptive/interpretive analysis
-        const response = await fetch('/api/data-analysis', { // This is the LLM endpoint
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Error performing AI analysis:", errorData);
-          showError("Failed to get AI analysis: " + (errorData.error || response.statusText));
-        } else {
-          const result = await response.json();
-          setAnalysisReport(result.report); // LLM backend returns a string in 'report' field
-          showSuccess(`AI ${analysisType.replace(/_/g, ' ')} analysis complete!`);
-        }
+        const result = await response.json();
+        setAnalysisReport(result.report); // LLM backend returns a string in 'report' field
+        showSuccess(`AI ${analysisType.replace(/_/g, ' ')} analysis complete!`);
       }
     } catch (error: any) {
       console.error("Unexpected error during analysis:", error);
@@ -342,53 +316,7 @@ const DataAnalysis = () => {
               {analysisReport && (
                 <div className="mt-8 p-4 border rounded-md bg-muted text-left whitespace-pre-wrap">
                   <h4 className="text-xl font-semibold mb-2">AI Analysis Report:</h4>
-                  {typeof analysisReport === 'string' ? (
-                    <p className="text-muted-foreground">{analysisReport}</p>
-                  ) : (
-                    <div>
-                      {analysisReport.report_text && (
-                        <p className="text-muted-foreground mb-4">{analysisReport.report_text}</p>
-                      )}
-                      {analysisReport.summary_stats && (
-                        <>
-                          <h5 className="text-lg font-medium mb-1">Descriptive Statistics:</h5>
-                          <pre className="bg-background p-2 rounded-md text-sm overflow-x-auto">
-                            {JSON.stringify(analysisReport.summary_stats, null, 2)}
-                          </pre>
-                        </>
-                      )}
-                      {analysisReport.correlation_matrix && (
-                        <>
-                          <h5 className="text-lg font-medium mb-1 mt-4">Correlation Matrix:</h5>
-                          <pre className="bg-background p-2 rounded-md text-sm overflow-x-auto">
-                            {JSON.stringify(analysisReport.correlation_matrix, null, 2)}
-                          </pre>
-                        </>
-                      )}
-                      {analysisReport.cluster_profile && (
-                        <>
-                          <h5 className="text-lg font-medium mb-1 mt-4">Cluster Profile:</h5>
-                          <pre className="bg-background p-2 rounded-md text-sm overflow-x-auto">
-                            {JSON.stringify(analysisReport.cluster_profile, null, 2)}
-                          </pre>
-                        </>
-                      )}
-                      {analysisReport.anomaly_detection_summary && (
-                        <>
-                          <h5 className="text-lg font-medium mb-1 mt-4">Anomaly Detection Summary:</h5>
-                          <pre className="bg-background p-2 rounded-md text-sm overflow-x-auto">
-                            {JSON.stringify(analysisReport.anomaly_detection_summary, null, 2)}
-                          </pre>
-                        </>
-                      )}
-                      {analysisReport.plot_base64 && (
-                        <>
-                          <h5 className="text-lg font-medium mb-1 mt-4">Generated Plot:</h5>
-                          <img src={`data:image/png;base64,${analysisReport.plot_base64}`} alt="Analysis Plot" className="max-w-full h-auto mx-auto" />
-                        </>
-                      )}
-                    </div>
-                  )}
+                  <p className="text-muted-foreground">{analysisReport}</p>
                 </div>
               )}
 
