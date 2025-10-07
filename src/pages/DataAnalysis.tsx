@@ -22,8 +22,8 @@ const DataAnalysis = () => {
 
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
   const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
-  const [parsedData, setParsedData] = useState<Record<string, any>[]>(initialParsedData || []);
-  const [dataHeaders, setDataHeaders] = useState<string[]>(initialDataHeaders || []);
+  const [parsedData, setParsedData] = useState<Record<string, any>[]>([]);
+  const [dataHeaders, setDataHeaders] = useState<string[]>([]);
   const [analysisReport, setAnalysisReport] = useState<string | { summary_stats?: object; report_text?: string; plot_base64?: string; cluster_profile?: object; correlation_matrix?: object; anomaly_detection_summary?: object; association_rules?: object; } | null>(null);
 
   const [selectedChartType, setSelectedChartType] = useState<string>("");
@@ -36,8 +36,31 @@ const DataAnalysis = () => {
     let dataToUse = initialParsedData;
     let headersToUse = initialDataHeaders;
 
-    if (!dataToUse || dataToUse.length === 0) {
-      // If no data is passed, provide a dummy dataset for demo purposes
+    if (dataToUse && dataToUse.length > 0) {
+      // Convert string values to numbers for charting if possible
+      const numericParsedData = dataToUse.map(row => {
+        const newRow: Record<string, any> = {};
+        for (const key in row) {
+          const value = row[key];
+          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
+        }
+        return newRow;
+      });
+      setParsedData(numericParsedData);
+      setDataHeaders(headersToUse || []);
+      showSuccess("Data loaded for analysis!");
+
+      // Automatically trigger analysis if an analysisType is provided from Templates page
+      if (initialAnalysisType) {
+        handlePerformAnalysis(initialAnalysisType, numericParsedData, headersToUse || []);
+      }
+    } else if (initialAnalysisType) {
+      // If an analysis type was requested but no data was provided, prompt user to upload
+      showError("Please upload data to perform this analysis.");
+      // Optionally, navigate to upload page or show a specific message in UI
+      // For now, we'll just show the "No data uploaded yet" message below.
+    } else {
+      // If no data and no specific analysis type, load dummy data for demo
       const dummyData = [
         { id: 1, category: "Electronics", sales: 100, profit: 20, region: "East" },
         { id: 2, category: "Clothing", sales: 150, profit: 25, region: "West" },
@@ -48,33 +71,22 @@ const DataAnalysis = () => {
         { id: 7, category: "Electronics", sales: 110, profit: 21, region: "North" },
         { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
       ];
-      dataToUse = dummyData;
-      headersToUse = ["id", "category", "sales", "profit", "region"];
+      const dummyHeaders = ["id", "category", "sales", "profit", "region"];
+      const numericDummyData = dummyData.map(row => {
+        const newRow: Record<string, any> = {};
+        for (const key in row) {
+          const value = row[key];
+          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
+        }
+        return newRow;
+      });
+      setParsedData(numericDummyData);
+      setDataHeaders(dummyHeaders);
       setSelectedChartType("BarChart");
       setSelectedXAxis("category");
       setSelectedYAxis("sales");
       setCurrentChart({ type: "BarChart", xAxis: "category", yAxis: "sales" });
-    }
-
-    // Convert string values to numbers for charting if possible
-    const numericParsedData = dataToUse.map(row => {
-      const newRow: Record<string, any> = {};
-      for (const key in row) {
-        const value = row[key];
-        newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
-      }
-      return newRow;
-    });
-    setParsedData(numericParsedData);
-    setDataHeaders(headersToUse || []);
-
-    if (initialParsedData && initialParsedData.length > 0) {
-      showSuccess("Data loaded for analysis!");
-    }
-
-    // Automatically trigger analysis if an analysisType is provided from Templates page
-    if (initialAnalysisType && numericParsedData.length > 0) {
-      handlePerformAnalysis(initialAnalysisType, numericParsedData, headersToUse || []);
+      showSuccess("Loaded demo data for analysis.");
     }
   }, [initialParsedData, initialDataHeaders, initialAnalysisType]);
 
@@ -320,7 +332,6 @@ const DataAnalysis = () => {
                 )}
               </div>
 
-              {/* Removed the old analysis buttons, as selection now happens on Templates page */}
               {isLoadingAnalysis && (
                 <div className="flex items-center justify-center space-x-2 text-primary mt-8">
                   <LoadingSpinner size={20} />

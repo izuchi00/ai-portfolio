@@ -1,20 +1,26 @@
 "use client";
 
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Smile, Tag, BookOpen } from "lucide-react";
+import { Smile, Tag, BookOpen, Languages, Type } from "lucide-react"; // Added Languages and Type icons
 import { Badge } from "@/components/ui/badge";
-import LoadingSpinner from "@/components/LoadingSpinner"; // Import LoadingSpinner
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const TextAnalysis = () => {
+  const location = useLocation();
+  const { analysisType } = (location.state || {}) as { analysisType?: string };
+
   const [inputText, setInputText] = useState<string>("");
   const [sentiment, setSentiment] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [summary, setSummary] = useState<string | null>(null);
+  const [extractedEntities, setExtractedEntities] = useState<string[]>([]); // New state for extracted entities
+  const [translatedText, setTranslatedText] = useState<string | null>(null); // New state for translated text
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleAnalyzeText = () => {
@@ -27,45 +33,96 @@ const TextAnalysis = () => {
     setSentiment(null);
     setKeywords([]);
     setSummary(null);
+    setExtractedEntities([]);
+    setTranslatedText(null);
 
-    // Simulate AI analysis
+    // Simulate AI analysis based on analysisType
     setTimeout(() => {
       const lowerText = inputText.toLowerCase();
-      let simulatedSentiment = "Neutral";
-      let simulatedKeywords: string[] = [];
-      let simulatedSummary = "This is a simulated summary of your text. For real-time, advanced summarization, a backend integration with a large language model is required.";
 
-      if (lowerText.includes("great") || lowerText.includes("excellent") || lowerText.includes("happy") || lowerText.includes("positive")) {
-        simulatedSentiment = "Positive";
-      } else if (lowerText.includes("bad") || lowerText.includes("terrible") || lowerText.includes("sad") || lowerText.includes("negative")) {
-        simulatedSentiment = "Negative";
+      switch (analysisType) {
+        case "sentiment_analysis":
+          let simulatedSentiment = "Neutral";
+          if (lowerText.includes("great") || lowerText.includes("excellent") || lowerText.includes("happy") || lowerText.includes("positive")) {
+            simulatedSentiment = "Positive";
+          } else if (lowerText.includes("bad") || lowerText.includes("terrible") || lowerText.includes("sad") || lowerText.includes("negative")) {
+            simulatedSentiment = "Negative";
+          }
+          setSentiment(simulatedSentiment);
+          toast.success("Simulated sentiment analysis complete!");
+          break;
+
+        case "text_extraction":
+          const commonWords = ["the", "a", "an", "is", "are", "was", "were", "and", "or", "but", "to", "of", "in", "for", "on", "with", "this", "that", "it", "its"];
+          const simulatedKeywords = Array.from(new Set(
+            lowerText
+              .replace(/[.,!?;:"']/g, "")
+              .split(/\s+/)
+              .filter(word => word.length > 3 && !commonWords.includes(word))
+              .slice(0, 5) // Limit to 5 keywords
+          ));
+          setExtractedEntities(simulatedKeywords); // Using keywords as simulated entities
+          toast.success("Simulated text extraction complete!");
+          break;
+
+        case "language_translation":
+          // Simple simulation: just append " (translated to English)"
+          setTranslatedText(`${inputText} (simulated translation to English)`);
+          toast.success("Simulated language translation complete!");
+          break;
+
+        default:
+          // Default behavior if no specific analysisType or for general analysis
+          let defaultSentiment = "Neutral";
+          if (lowerText.includes("great") || lowerText.includes("excellent") || lowerText.includes("happy") || lowerText.includes("positive")) {
+            defaultSentiment = "Positive";
+          } else if (lowerText.includes("bad") || lowerText.includes("terrible") || lowerText.includes("sad") || lowerText.includes("negative")) {
+            defaultSentiment = "Negative";
+          }
+          setSentiment(defaultSentiment);
+
+          const defaultCommonWords = ["the", "a", "an", "is", "are", "was", "were", "and", "or", "but", "to", "of", "in", "for", "on", "with", "this", "that", "it", "its"];
+          const defaultKeywords = Array.from(new Set(
+            lowerText
+              .replace(/[.,!?;:"']/g, "")
+              .split(/\s+/)
+              .filter(word => word.length > 3 && !defaultCommonWords.includes(word))
+              .slice(0, 5)
+          ));
+          setKeywords(defaultKeywords);
+          setSummary("This is a simulated summary of your text. For real-time, advanced summarization, a backend integration with a large language model is required.");
+          toast.success("Simulated text analysis complete!");
+          break;
       }
-
-      // Simple keyword extraction simulation
-      const commonWords = ["the", "a", "an", "is", "are", "was", "were", "and", "or", "but", "to", "of", "in", "for", "on", "with", "this", "that", "it", "its"];
-      simulatedKeywords = Array.from(new Set(
-        lowerText
-          .replace(/[.,!?;:"']/g, "")
-          .split(/\s+/)
-          .filter(word => word.length > 3 && !commonWords.includes(word))
-          .slice(0, 5) // Limit to 5 keywords
-      ));
-
-      setSentiment(simulatedSentiment);
-      setKeywords(simulatedKeywords);
-      setSummary(simulatedSummary);
       setIsLoading(false);
-      toast.success("Simulated text analysis complete!");
     }, 2000); // Simulate 2-second analysis time
+  };
+
+  const getTitle = () => {
+    switch (analysisType) {
+      case "sentiment_analysis": return "AI-Powered Sentiment Analysis";
+      case "text_extraction": return "AI-Powered Text Extraction";
+      case "language_translation": return "AI-Powered Language Translation";
+      default: return "AI-Powered Text Analysis";
+    }
+  };
+
+  const getDescription = () => {
+    switch (analysisType) {
+      case "sentiment_analysis": return "Analyze the emotional tone of your text (positive, negative, neutral).";
+      case "text_extraction": return "Extract specific entities like names, organizations, or keywords from your text.";
+      case "language_translation": return "Translate your text from one language to another (simulated).";
+      default: return "Extract insights from your text: sentiment, keywords, and summaries (simulated).";
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center py-8">
       <Card className="w-full max-w-3xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">AI-Powered Text Analysis</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center">{getTitle()}</CardTitle>
           <CardDescription className="text-center mt-2">
-            Extract insights from your text: sentiment, keywords, and summaries (simulated).
+            {getDescription()}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -92,11 +149,11 @@ const TextAnalysis = () => {
                 Analyzing...
               </>
             ) : (
-              "Analyze Text (Demo)"
+              `Analyze Text (Demo)`
             )}
           </Button>
 
-          {(sentiment || keywords.length > 0 || summary) && (
+          {(sentiment || keywords.length > 0 || summary || extractedEntities.length > 0 || translatedText) && (
             <div className="mt-8 space-y-6">
               <h3 className="text-2xl font-semibold text-center">Simulated Analysis Results:</h3>
 
@@ -110,7 +167,33 @@ const TextAnalysis = () => {
                 </div>
               )}
 
-              {keywords.length > 0 && (
+              {extractedEntities.length > 0 && (
+                <div className="flex items-start gap-4 p-4 border rounded-md bg-muted">
+                  <Type className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="text-lg font-medium">Extracted Entities (Simulated Keywords):</h4>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {extractedEntities.map((entity, index) => (
+                        <Badge key={index} variant="secondary" className="text-md px-3 py-1">
+                          {entity}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {translatedText && (
+                <div className="flex items-start gap-4 p-4 border rounded-md bg-muted">
+                  <Languages className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="text-lg font-medium">Translated Text:</h4>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{translatedText}</p>
+                  </div>
+                </div>
+              )}
+
+              {keywords.length > 0 && ( // General keywords, shown if not a specific extraction
                 <div className="flex items-start gap-4 p-4 border rounded-md bg-muted">
                   <Tag className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
                   <div>
@@ -126,7 +209,7 @@ const TextAnalysis = () => {
                 </div>
               )}
 
-              {summary && (
+              {summary && ( // General summary, shown if not a specific translation
                 <div className="flex items-start gap-4 p-4 border rounded-md bg-muted">
                   <BookOpen className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
                   <div>
