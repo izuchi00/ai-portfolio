@@ -4,6 +4,8 @@
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ],
   "functions": {
+    "api/ai-chat.ts": { "runtime": "nodejs20.x" },
+    "api/data-analysis.ts": { "runtime": "nodejs20.x" },
     "api/python-analysis/**": {
       "runtime": "docker",
       "memory": 1024,
