@@ -26,6 +26,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const HF_TOKEN = process.env.HF_TOKEN;
+    // Log to check if HF_TOKEN is present
+    console.log("HF_TOKEN is set:", !!HF_TOKEN); 
     const HF_MODEL = "google/gemma-2b-it"; // Changed to a model served by an inference provider
 
     if (!HF_TOKEN) {
