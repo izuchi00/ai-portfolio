@@ -26,16 +26,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const HF_TOKEN = process.env.HF_TOKEN;
-    // Log to check if HF_TOKEN is present
-    console.log("HF_TOKEN is set:", !!HF_TOKEN); 
-    const HF_MODEL = "google/gemma-2b-it"; // Changed to a model served by an inference provider
+    // Use HF_MODEL from environment variables, defaulting to a known-good public model
+    const MODEL_ID = (process.env.HF_MODEL || 'HuggingFaceH4/zephyr-7b-beta').trim();
 
     if (!HF_TOKEN) {
       return res.status(500).json({ error: 'Hugging Face API Token (HF_TOKEN) not set. Please configure it in Vercel environment variables.' });
     }
 
-    // Updated to the new Hugging Face Inference Providers endpoint
-    const huggingFaceApiUrl = `https://router.huggingface.co/hf-inference/${HF_MODEL}`;
+    // Reverted to the original Hugging Face Inference API endpoint for free models
+    const huggingFaceApiUrl = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
     
     const response = await fetch(huggingFaceApiUrl, {
       method: 'POST',
@@ -46,11 +45,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify({
         inputs: prompt,
         parameters: {
-          max_new_tokens: 500,
+          max_new_tokens: 256, // Adjusted max tokens
           temperature: 0.7,
+          do_sample: true, // Added do_sample for more varied responses
+          return_full_text: false, // Ensure only generated text is returned for chat models
         },
         options: {
-          wait_for_model: true, // Wait for the model to load if it's not active
+          wait_for_model: true,
         },
       }),
     });
@@ -66,11 +67,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         errorMessage = responseText || errorMessage;
       }
       console.error("Hugging Face API Error:", errorMessage);
-      return res.status(response.status).json({ error: `Hugging Face API model not found or inaccessible. Model: ${HF_MODEL} - ${errorMessage}` });
+      return res.status(response.status).json({ error: `Failed to get AI response: Hugging Face API model not found or inaccessible. Model: ${MODEL_ID} - ${errorMessage}` });
     }
 
     if (responseText.trim().toLowerCase() === 'not found') {
-        return res.status(404).json({ error: `Hugging Face API returned 'Not Found' for model ${HF_MODEL}. This might indicate the model is unavailable or your token lacks specific permissions.` });
+        return res.status(404).json({ error: `Hugging Face API returned 'Not Found' for model ${MODEL_ID}. This might indicate the model is unavailable or your token lacks specific permissions.` });
     }
 
     let data;
