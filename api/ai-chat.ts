@@ -52,15 +52,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
+    // Read the response body as text first to prevent JSON parsing errors on non-JSON responses
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Hugging Face API Error:", errorData);
-      // Attempt to parse errorData, but fallback to responseText if it's not JSON
-      const errorMessage = errorData.error?.message || response.statusText || "Unknown Hugging Face API error.";
+      let errorMessage = `Hugging Face API error (${response.status}): ${response.statusText}`;
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.error?.message || JSON.stringify(errorData);
+      } catch (e) {
+        // If responseText is not JSON, use the raw text as the error message
+        errorMessage = responseText || errorMessage;
+      }
+      console.error("Hugging Face API Error:", errorMessage);
       return res.status(response.status).json({ error: `Hugging Face API model not found or inaccessible. Model: ${HF_MODEL} - ${errorMessage}` });
     }
 
-    const data = await response.json();
+    // If response.ok is true, but the content is still "Not Found" (e.g., a 200 OK with "Not Found" body)
+    if (responseText.trim().toLowerCase() === 'not found') {
+        return res.status(404).json({ error: `Hugging Face API returned 'Not Found' for model ${HF_MODEL}. This might indicate the model is unavailable or your token lacks specific permissions.` });
+    }
+
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (jsonError) {
+        console.error("Failed to parse JSON from Hugging Face response:", responseText, jsonError);
+        return res.status(500).json({ error: `Hugging Face API returned non-JSON response: ${responseText.substring(0, 200)}...` });
+    }
+    
     // Hugging Face Inference API for text generation usually returns an array
     const aiResponse = data[0]?.generated_text || "No specific response from Hugging Face.";
 
