@@ -4,22 +4,16 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import DesktopLayout from "./DesktopLayout";
-import { useIsMobile } from "@/hooks/use-mobile";
 
-const MainLayout = () => {
-  const isMobile = useIsMobile();
-
+const MainLayout: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Navbar />
-      {isMobile ? (
-        <main className="flex-grow container mx-auto p-4">
+      <main className="flex-1">
+        <div className="container mx-auto px-4 py-10">
           <Outlet />
-        </main>
-      ) : (
-        <DesktopLayout />
-      )}
+        </div>
+      </main>
       <Footer />
     </div>
   );
