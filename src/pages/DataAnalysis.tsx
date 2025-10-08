@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useLocation } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/utils/toast";
 import ChartBuilder from "@/components/ChartBuilder";
@@ -11,67 +17,104 @@ import DataTablePreview from "@/components/DataTablePreview";
 import AIChatInterface from "@/components/AIChatInterface";
 import DataTransformation from "@/components/DataTransformation";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import FileUploadZone from "@/components/FileUploadZone";
+import SectionWrapper from "@/components/SectionWrapper";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { analysisTemplates, AnalysisTemplate } from "@/data/templates";
+import { cn } from "@/lib/utils";
 
-type DataValue = string | number | null | undefined;
+ type DataValue = string | number | null | undefined;
 
 type DataRow = Record<string, DataValue>;
 
+const dataDrivenTemplates = analysisTemplates.filter((template) => template.requiresFile);
+
+const normalizeRows = (rows: Record<string, unknown>[]): DataRow[] =>
+  rows.map((row) => {
+    const newRow: DataRow = {};
+    Object.entries(row).forEach(([key, value]) => {
+      if (typeof value === "number") {
+        newRow[key] = value;
+        return;
+      }
+
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed === "") {
+          newRow[key] = "";
+          return;
+        }
+
+        const numericValue = Number(trimmed);
+        newRow[key] = Number.isNaN(numericValue) ? trimmed : numericValue;
+        return;
+      }
+
+      newRow[key] = (value ?? null) as DataValue;
+    });
+    return newRow;
+  });
+
 const DataAnalysis = () => {
   const location = useLocation();
-  const { parsedData: initialParsedData, dataHeaders: initialDataHeaders, analysisType: initialAnalysisType } = (location.state || {}) as {
-    parsedData?: DataRow[];
+  const {
+    parsedData: initialParsedData,
+    dataHeaders: initialDataHeaders,
+    analysisType: initialAnalysisType,
+  } = (location.state || {}) as {
+    parsedData?: Record<string, unknown>[];
     dataHeaders?: string[];
-    analysisType?: string; // New: analysisType from Templates page
+    analysisType?: string;
   };
 
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
   const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
   const [parsedData, setParsedData] = useState<DataRow[]>([]);
   const [dataHeaders, setDataHeaders] = useState<string[]>([]);
-  const [analysisReport, setAnalysisReport] = useState<string | null>(null); // Simplified to string
+  const [analysisReport, setAnalysisReport] = useState<string | null>(null);
 
   const [selectedChartType, setSelectedChartType] = useState<string>("");
   const [selectedXAxis, setSelectedXAxis] = useState<string>("");
   const [selectedYAxis, setSelectedYAxis] = useState<string>("");
   const [currentChart, setCurrentChart] = useState<{ type: string; xAxis: string; yAxis: string } | null>(null);
 
-  // Effect to load data and potentially trigger analysis
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialAnalysisType ?? "");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState<boolean>(false);
+
+  const resetVisualState = () => {
+    setAnalysisReport(null);
+    setCurrentChart(null);
+    setSelectedChartType("");
+    setSelectedXAxis("");
+    setSelectedYAxis("");
+  };
+
   useEffect(() => {
     const dataToUse = initialParsedData;
     const headersToUse = initialDataHeaders;
 
+    if (initialAnalysisType) {
+      setSelectedTemplateId(initialAnalysisType);
+    }
+
     if (dataToUse && dataToUse.length > 0) {
-      // Convert string values to numbers for charting if possible
-      const numericParsedData = dataToUse.map(row => {
-        const newRow: DataRow = {};
-        for (const key in row) {
-          const value = row[key];
-          const numericValue =
-            typeof value === "number"
-              ? value
-              : typeof value === "string" && value !== ""
-                ? Number(value)
-                : Number.NaN;
-          const isNumericValue = !Number.isNaN(numericValue);
-          newRow[key] = isNumericValue ? numericValue : value;
-        }
-        return newRow;
-      });
-      setParsedData(numericParsedData);
-      setDataHeaders(headersToUse || []);
+      const normalized = normalizeRows(dataToUse);
+      const headers = headersToUse && headersToUse.length > 0
+        ? headersToUse
+        : Object.keys(normalized[0] || {});
+      setParsedData(normalized);
+      setDataHeaders(headers);
+      resetVisualState();
       showSuccess("Data loaded for analysis!");
 
-      // Automatically trigger analysis if an analysisType is provided from Templates page
       if (initialAnalysisType) {
-        handlePerformAnalysis(initialAnalysisType, numericParsedData, headersToUse || []);
+        handlePerformAnalysis(initialAnalysisType, normalized, headers);
       }
     } else if (initialAnalysisType) {
-      // If an analysis type was requested but no data was provided, prompt user to upload
       showError("Please upload data to perform this analysis.");
-      // Optionally, navigate to upload page or show a specific message in UI
-      // For now, we'll just show the "No data uploaded yet" message below.
     } else {
-      // If no data and no specific analysis type, load dummy data for demo
       const dummyData = [
         { id: 1, category: "Electronics", sales: 100, profit: 20, region: "East" },
         { id: 2, category: "Clothing", sales: 150, profit: 25, region: "West" },
@@ -82,22 +125,9 @@ const DataAnalysis = () => {
         { id: 7, category: "Electronics", sales: 110, profit: 21, region: "North" },
         { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
       ];
+      const normalizedDummyData = normalizeRows(dummyData as Record<string, unknown>[]);
       const dummyHeaders = ["id", "category", "sales", "profit", "region"];
-      const numericDummyData = dummyData.map<DataRow>(row => {
-        const newRow: DataRow = {};
-        for (const key in row) {
-          const value = row[key as keyof typeof row];
-          const numericValue =
-            typeof value === "number"
-              ? value
-              : typeof value === "string" && value !== ""
-                ? Number(value)
-                : Number.NaN;
-          newRow[key] = !Number.isNaN(numericValue) ? numericValue : value;
-        }
-        return newRow;
-      });
-      setParsedData(numericDummyData);
+      setParsedData(normalizedDummyData);
       setDataHeaders(dummyHeaders);
       setSelectedChartType("BarChart");
       setSelectedXAxis("category");
@@ -107,6 +137,107 @@ const DataAnalysis = () => {
     }
   }, [initialParsedData, initialDataHeaders, initialAnalysisType]);
 
+  const handleTemplateSelect = (template: AnalysisTemplate) => {
+    setSelectedTemplateId(template.analysisType);
+    setAnalysisReport(null);
+  };
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setParsedData([]);
+    setDataHeaders([]);
+    resetVisualState();
+    parseFile(file);
+  };
+
+  const parseFile = (file: File) => {
+    setIsParsingFile(true);
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const data = event.target?.result;
+      if (!data) {
+        showError("Failed to read file.");
+        setIsParsingFile(false);
+        return;
+      }
+
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+      if (fileExtension === "csv") {
+        Papa.parse(data as string, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            if (results.errors.length > 0) {
+              console.error("CSV parsing errors:", results.errors);
+              showError("Error parsing CSV file. Check console for details.");
+            }
+            const rows = (results.data as Record<string, unknown>[]) || [];
+            const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+            setParsedData(normalizeRows(rows));
+            setDataHeaders(headers);
+            showSuccess("CSV file parsed successfully!");
+            setIsParsingFile(false);
+          },
+          error: (error: Error) => {
+            showError(`Error parsing CSV: ${error.message}`);
+            setIsParsingFile(false);
+          },
+        });
+      } else if (fileExtension === "xlsx" || fileExtension === "xls") {
+        try {
+          const workbook = XLSX.read(data, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          if (json.length === 0) {
+            showError("Excel file is empty or could not be parsed.");
+            setIsParsingFile(false);
+            return;
+          }
+
+          const headers = json[0] as string[];
+          const rows = json.slice(1) as unknown[][];
+
+          const parsedRows = rows.map((row) => {
+            const rowObject: Record<string, unknown> = {};
+            headers.forEach((header, index) => {
+              rowObject[header] = row[index] ?? "";
+            });
+            return rowObject;
+          });
+
+          setParsedData(normalizeRows(parsedRows));
+          setDataHeaders(headers);
+          showSuccess("Excel file parsed successfully!");
+          setIsParsingFile(false);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Unexpected error while parsing Excel file.";
+          showError(`Error parsing Excel file: ${message}`);
+          setIsParsingFile(false);
+        }
+      } else {
+        showError("Unsupported file type. Please upload a CSV or Excel file.");
+        setIsParsingFile(false);
+      }
+    };
+
+    reader.onerror = () => {
+      showError("Failed to read file.");
+      setIsParsingFile(false);
+    };
+
+    if (file.type === "text/csv" || file.name.endsWith(".csv")) {
+      reader.readAsText(file);
+    } else if (file.type.includes("excel") || file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      reader.readAsBinaryString(file);
+    } else {
+      showError("Unsupported file type. Please upload a CSV or Excel file.");
+      setIsParsingFile(false);
+    }
+  };
 
   const handlePerformAnalysis = async (analysisType: string, currentData: DataRow[], currentHeaders: string[]) => {
     if (currentData.length === 0) {
@@ -115,14 +246,13 @@ const DataAnalysis = () => {
     }
 
     setIsLoadingAnalysis(true);
-    setAnalysisReport(null); // Clear previous report
+    setAnalysisReport(null);
 
     try {
-      // All analysis types will now go through the LLM backend for descriptive reports
-      const response = await fetch('/api/data-analysis', { // This is the LLM endpoint
-        method: 'POST',
+      const response = await fetch("/api/data-analysis", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
       });
@@ -133,8 +263,8 @@ const DataAnalysis = () => {
         showError("Failed to get AI analysis: " + (errorData.error || response.statusText));
       } else {
         const result = await response.json();
-        setAnalysisReport(result.report); // LLM backend returns a string in 'report' field
-        showSuccess(`AI ${analysisType.replace(/_/g, ' ')} analysis complete!`);
+        setAnalysisReport(result.report);
+        showSuccess(`AI ${analysisType.replace(/_/g, " ")} analysis complete!`);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "An unexpected error occurred.";
@@ -153,20 +283,20 @@ const DataAnalysis = () => {
   const handleTransformData = (column: string, transformation: string) => {
     setIsLoadingTransformation(true);
     setTimeout(() => {
-      setParsedData(prevData => {
-        const newData = prevData.map<DataRow>(row => ({ ...row })); // Deep copy to avoid direct state mutation
+      setParsedData((prevData) => {
+        const newData = prevData.map<DataRow>((row) => ({ ...row }));
 
         switch (transformation) {
           case "fill_missing_mean": {
             const numericValues = newData
-              .map(row => Number(row[column]))
-              .filter(value => !isNaN(value));
+              .map((row) => Number(row[column]))
+              .filter((value) => !Number.isNaN(value));
             const mean = numericValues.length > 0
               ? numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length
               : 0;
-            newData.forEach(row => {
+            newData.forEach((row) => {
               if (row[column] === null || row[column] === undefined || row[column] === "") {
-                row[column] = mean.toFixed(2); // Fill with mean, keep 2 decimal places
+                row[column] = mean.toFixed(2);
               }
             });
             showSuccess(`Simulated: Filled missing values in '${column}' with mean (${mean.toFixed(2)}).`);
@@ -174,8 +304,8 @@ const DataAnalysis = () => {
           }
           case "fill_missing_median": {
             const numericValues = newData
-              .map(row => Number(row[column]))
-              .filter(value => !isNaN(value))
+              .map((row) => Number(row[column]))
+              .filter((value) => !Number.isNaN(value))
               .sort((a, b) => a - b);
             let median = 0;
             if (numericValues.length > 0) {
@@ -184,9 +314,9 @@ const DataAnalysis = () => {
                 ? (numericValues[mid - 1] + numericValues[mid]) / 2
                 : numericValues[mid];
             }
-            newData.forEach(row => {
+            newData.forEach((row) => {
               if (row[column] === null || row[column] === undefined || row[column] === "") {
-                row[column] = median.toFixed(2); // Fill with median
+                row[column] = median.toFixed(2);
               }
             });
             showSuccess(`Simulated: Filled missing values in '${column}' with median (${median.toFixed(2)}).`);
@@ -194,7 +324,7 @@ const DataAnalysis = () => {
           }
           case "fill_missing_mode": {
             const valueCounts: { [key: string]: number } = {};
-            newData.forEach(row => {
+            newData.forEach((row) => {
               const value = String(row[column]);
               if (value !== null && value !== undefined && value !== "") {
                 valueCounts[value] = (valueCounts[value] || 0) + 1;
@@ -208,7 +338,7 @@ const DataAnalysis = () => {
                 mode = value;
               }
             }
-            newData.forEach(row => {
+            newData.forEach((row) => {
               if (row[column] === null || row[column] === undefined || row[column] === "") {
                 row[column] = mode;
               }
@@ -217,23 +347,23 @@ const DataAnalysis = () => {
             break;
           }
           case "convert_to_number":
-            newData.forEach(row => {
+            newData.forEach((row) => {
               const value = row[column];
               const numValue = Number(value);
-              row[column] = !isNaN(numValue) ? numValue : null; // Convert to number, or null if not a valid number
+              row[column] = !Number.isNaN(numValue) ? numValue : null;
             });
             showSuccess(`Simulated: Converted column '${column}' to numbers.`);
             break;
           case "convert_to_string":
-            newData.forEach(row => {
+            newData.forEach((row) => {
               row[column] = String(row[column]);
             });
             showSuccess(`Simulated: Converted column '${column}' to strings.`);
             break;
           case "normalize_data": {
             const numericValues = newData
-              .map(row => Number(row[column]))
-              .filter(value => !isNaN(value));
+              .map((row) => Number(row[column]))
+              .filter((value) => !Number.isNaN(value));
             if (numericValues.length === 0) {
               showError(`Cannot normalize '${column}': No numeric values found.`);
               break;
@@ -243,15 +373,15 @@ const DataAnalysis = () => {
             const range = max - min;
 
             if (range === 0) {
-              newData.forEach(row => {
-                if (!isNaN(Number(row[column]))) row[column] = 0; // All values are the same, normalize to 0
+              newData.forEach((row) => {
+                if (!Number.isNaN(Number(row[column]))) row[column] = 0;
               });
               showSuccess(`Simulated: Normalized column '${column}' (all values are the same).`);
             } else {
-              newData.forEach(row => {
+              newData.forEach((row) => {
                 const value = Number(row[column]);
-                if (!isNaN(value)) {
-                  row[column] = ((value - min) / range).toFixed(4); // Min-Max normalization
+                if (!Number.isNaN(value)) {
+                  row[column] = ((value - min) / range).toFixed(4);
                 }
               });
               showSuccess(`Simulated: Normalized column '${column}' using Min-Max scaling.`);
@@ -264,43 +394,133 @@ const DataAnalysis = () => {
         return newData;
       });
       setIsLoadingTransformation(false);
-    }, 1500); // Simulate transformation time
+    }, 1500);
   };
 
-  // Generate a simple data summary for the AI chat
   const generateDataSummary = () => {
     if (parsedData.length === 0) return "No data available.";
     const numRows = parsedData.length;
     const numCols = dataHeaders.length;
-    return `Your dataset contains ${numRows} rows and ${numCols} columns. Key columns include: ${dataHeaders.slice(0, 3).join(", ")}${numCols > 3 ? "..." : ""}.`;
+    return `Your dataset contains ${numRows} rows and ${numCols} columns. Key columns include: ${dataHeaders
+      .slice(0, 3)
+      .join(", ")}${numCols > 3 ? "..." : ""}.`;
+  };
+
+  const selectedTemplate = dataDrivenTemplates.find(
+    (template) => template.analysisType === selectedTemplateId,
+  );
+
+  const handleRunAnalysisClick = () => {
+    if (!selectedTemplate) {
+      showError("Select an analysis template to continue.");
+      return;
+    }
+
+    handlePerformAnalysis(selectedTemplate.analysisType, parsedData, dataHeaders);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-8">
-      <Card className="w-full max-w-5xl">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">AI-Powered Data Analysis</CardTitle>
-          <CardDescription className="text-center mt-2">
-            Upload your dataset and let our AI agents process, clean, analyze, and visualize your data.
-            Get insightful summaries and actionable intelligence.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8 text-center">
-          {parsedData.length > 0 ? (
-            <>
-              <h3 className="text-xl font-semibold">Your Data Preview:</h3>
-              <DataTablePreview data={parsedData} headers={dataHeaders} />
+    <SectionWrapper className="space-y-10 py-10">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold">Pick a Template</CardTitle>
+            <CardDescription>
+              Choose an AI workflow to guide your analysis. Templates that require a dataset can be run directly below.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            {dataDrivenTemplates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => handleTemplateSelect(template)}
+                className={cn(
+                  "rounded-lg border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  selectedTemplateId === template.analysisType
+                    ? "border-primary bg-primary/10"
+                    : "hover:border-primary/60",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <template.icon className="h-6 w-6 text-primary" />
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
+                      {template.category}
+                    </p>
+                    <h3 className="text-lg font-semibold text-foreground">{template.title}</h3>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">{template.description}</p>
+                <p className="mt-3 text-xs font-medium text-muted-foreground">
+                  {template.steps} step{template.steps !== 1 ? "s" : ""} of guided insight
+                </p>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
 
-              <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-semibold">Upload Your Dataset</CardTitle>
+            <CardDescription>
+              Drop a CSV or Excel file, preview the data, and run it through the selected template.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FileUploadZone onFileSelect={handleFileSelect} acceptedFileTypes=".csv,.xlsx,.xls" />
+            {isParsingFile && (
+              <div className="flex items-center justify-center gap-2 text-primary">
+                <LoadingSpinner size={18} />
+                <span>Parsing file...</span>
+              </div>
+            )}
+            {selectedFile && !isParsingFile && (
+              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                Loaded <span className="font-medium text-foreground">{selectedFile.name}</span>
+                {parsedData.length > 0 ? ` • ${parsedData.length} rows detected` : ""}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">Data Preview & Preparation</CardTitle>
+            <CardDescription>
+              Inspect your dataset and simulate quick cleaning steps before you run AI-generated insights.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {parsedData.length > 0 ? (
+              <>
+                <DataTablePreview data={parsedData} headers={dataHeaders} />
                 <DataTransformation
                   headers={dataHeaders}
                   onTransformData={handleTransformData}
                   isLoading={isLoadingTransformation}
                 />
+              </>
+            ) : (
+              <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
+                Upload a dataset to unlock the preview and transformation tools.
               </div>
+            )}
+          </CardContent>
+        </Card>
 
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Interactive Chart Builder:</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">Visual Exploration</CardTitle>
+            <CardDescription>
+              Build charts to understand key relationships in your data before requesting the AI summary.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {parsedData.length > 0 ? (
+              <>
                 <ChartBuilder
                   headers={dataHeaders}
                   onBuildChart={handleBuildChart}
@@ -312,8 +532,8 @@ const DataAnalysis = () => {
                   setSelectedYAxis={setSelectedYAxis}
                 />
                 {currentChart && (
-                  <div className="mt-6">
-                    <h4 className="text-lg font-medium mb-2">Generated Chart:</h4>
+                  <div className="mt-4">
+                    <h4 className="text-base font-semibold mb-2">Generated Chart</h4>
                     <ChartDisplay
                       chartType={currentChart.type}
                       data={parsedData}
@@ -322,39 +542,79 @@ const DataAnalysis = () => {
                     />
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
+                Charts will appear once you upload data.
               </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-              {isLoadingAnalysis && (
-                <div className="flex items-center justify-center space-x-2 text-primary mt-8">
-                  <LoadingSpinner size={20} />
-                  <span>Generating AI analysis report...</span>
-                </div>
-              )}
-
-              {analysisReport && (
-                <div className="mt-8 p-4 border rounded-md bg-muted text-left whitespace-pre-wrap">
-                  <h4 className="text-xl font-semibold mb-2">AI Analysis Report:</h4>
-                  <p className="text-muted-foreground">{analysisReport}</p>
-                </div>
-              )}
-
-              <div className="mt-8">
-                <AIChatInterface dataHeaders={dataHeaders} dataSummary={generateDataSummary()} />
+      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">AI Analysis Report</CardTitle>
+            <CardDescription>
+              Run the selected template to generate a natural-language summary, risk flags, and opportunities.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground">
+                {selectedTemplate
+                  ? `Ready to run the ${selectedTemplate.title} template.`
+                  : "Choose a template to enable AI analysis."}
               </div>
-            </>
-          ) : (
-            <div className="text-center space-y-4">
-              <p className="text-lg text-muted-foreground">
-                No data uploaded yet. Please go to the <Link to="/upload-data" className="text-primary underline">Upload Data</Link> page to begin.
-              </p>
-              <Button size="lg" onClick={() => window.location.href = "/upload-data"}>
-                Upload Data
+              <Button
+                onClick={handleRunAnalysisClick}
+                disabled={
+                  !selectedTemplate ||
+                  parsedData.length === 0 ||
+                  isLoadingAnalysis ||
+                  isParsingFile
+                }
+              >
+                {isLoadingAnalysis ? "Generating..." : selectedTemplate ? `Run ${selectedTemplate.title}` : "Run Analysis"}
               </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+
+            {isLoadingAnalysis && (
+              <div className="flex items-center justify-center gap-2 text-primary">
+                <LoadingSpinner size={18} />
+                <span>Generating AI analysis report...</span>
+              </div>
+            )}
+
+            {analysisReport && (
+              <div className="rounded-md border bg-muted p-4 text-left text-sm text-muted-foreground whitespace-pre-wrap">
+                <h4 className="text-base font-semibold text-foreground mb-2">AI Findings</h4>
+                {analysisReport}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">Chat with Your Data</CardTitle>
+            <CardDescription>
+              Ask follow-up questions or request tailored summaries based on the current dataset.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {parsedData.length > 0 ? (
+              <AIChatInterface dataHeaders={dataHeaders} dataSummary={generateDataSummary()} />
+            ) : (
+              <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
+                Once a dataset is loaded, you can chat with the AI about specific insights.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </SectionWrapper>
   );
 };
 
