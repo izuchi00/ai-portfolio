@@ -15,6 +15,8 @@ interface ChartBuilderProps {
   setSelectedXAxis: (axis: string) => void;
   selectedYAxis: string;
   setSelectedYAxis: (axis: string) => void;
+  isDemoLocked?: boolean;
+  lockMessage?: string;
 }
 
 const ChartBuilder: React.FC<ChartBuilderProps> = ({
@@ -26,11 +28,13 @@ const ChartBuilder: React.FC<ChartBuilderProps> = ({
   setSelectedXAxis,
   selectedYAxis,
   setSelectedYAxis,
+  isDemoLocked,
+  lockMessage,
 }) => {
   const chartTypes = ["BarChart", "LineChart", "PieChart"]; // Add more as needed
 
   const handleBuildClick = () => {
-    if (selectedChartType && selectedXAxis && selectedYAxis) {
+    if (selectedChartType && selectedXAxis && selectedYAxis && !isDemoLocked) {
       onBuildChart(selectedChartType, selectedXAxis, selectedYAxis);
     }
   };
@@ -93,10 +97,13 @@ const ChartBuilder: React.FC<ChartBuilderProps> = ({
         <Button
           onClick={handleBuildClick}
           className="w-full"
-          disabled={!selectedChartType || !selectedXAxis || !selectedYAxis}
+          disabled={!selectedChartType || !selectedXAxis || !selectedYAxis || isDemoLocked}
         >
-          Generate Chart
+          {isDemoLocked ? "Demo Limit Reached" : "Generate Chart"}
         </Button>
+        {isDemoLocked && lockMessage && (
+          <p className="text-xs text-muted-foreground text-center">{lockMessage}</p>
+        )}
       </CardContent>
     </Card>
   );

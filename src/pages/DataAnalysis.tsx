@@ -1,7 +1,8 @@
+
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -10,6 +11,9 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { showSuccess, showError } from "@/utils/toast";
 import ChartBuilder from "@/components/ChartBuilder";
 import ChartDisplay from "@/components/ChartDisplay";
@@ -23,12 +27,83 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { analysisTemplates, AnalysisTemplate } from "@/data/templates";
 import { cn } from "@/lib/utils";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  Rocket,
+  ShieldCheck,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 
- type DataValue = string | number | null | undefined;
+type DataValue = string | number | null | undefined;
 
 type DataRow = Record<string, DataValue>;
 
-const dataDrivenTemplates = analysisTemplates.filter((template) => template.requiresFile);
+const DEMO_ROW_LIMIT = 200;
+const CHART_DEMO_LIMIT = 1;
+const CHAT_DEMO_LIMIT = 3;
+
+const curatedDemoRaw: Record<string, unknown>[] = [
+  {
+    segment: "Retail Media",
+    objective: "Revenue Quality",
+    records: 1248,
+    conversion_rate: 0.042,
+    churn_risk: "Low",
+    revenue_delta: 18.4,
+    region: "North America",
+  },
+  {
+    segment: "FinTech Enterprise",
+    objective: "Fraud Monitoring",
+    records: 986,
+    conversion_rate: 0.035,
+    churn_risk: "Medium",
+    revenue_delta: 12.7,
+    region: "Europe",
+  },
+  {
+    segment: "Healthcare",
+    objective: "Capacity Forecast",
+    records: 1543,
+    conversion_rate: 0.051,
+    churn_risk: "Low",
+    revenue_delta: 23.1,
+    region: "North America",
+  },
+  {
+    segment: "E-Commerce",
+    objective: "Retention",
+    records: 2134,
+    conversion_rate: 0.048,
+    churn_risk: "High",
+    revenue_delta: -6.8,
+    region: "Asia-Pacific",
+  },
+  {
+    segment: "Logistics",
+    objective: "Route Optimisation",
+    records: 874,
+    conversion_rate: 0.029,
+    churn_risk: "Medium",
+    revenue_delta: 9.4,
+    region: "Latin America",
+  },
+  {
+    segment: "SaaS Scale-up",
+    objective: "Usage Intelligence",
+    records: 1342,
+    conversion_rate: 0.057,
+    churn_risk: "Low",
+    revenue_delta: 27.6,
+    region: "Global",
+  },
+];
+
+const curatedDemoHeaders = Object.keys(curatedDemoRaw[0] ?? {});
 
 const normalizeRows = (rows: Record<string, unknown>[]): DataRow[] =>
   rows.map((row) => {
@@ -82,6 +157,11 @@ const DataAnalysis = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialAnalysisType ?? "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isParsingFile, setIsParsingFile] = useState<boolean>(false);
+  const [chartBuilds, setChartBuilds] = useState<number>(0);
+
+  const previewData = useMemo(() => parsedData.slice(0, DEMO_ROW_LIMIT), [parsedData]);
+  const isPreviewLimited = parsedData.length > DEMO_ROW_LIMIT;
+  const isChartLimitReached = chartBuilds >= CHART_DEMO_LIMIT;
 
   const resetVisualState = () => {
     setAnalysisReport(null);
@@ -89,53 +169,40 @@ const DataAnalysis = () => {
     setSelectedChartType("");
     setSelectedXAxis("");
     setSelectedYAxis("");
+    setChartBuilds(0);
   };
 
   useEffect(() => {
-    const dataToUse = initialParsedData;
-    const headersToUse = initialDataHeaders;
-
     if (initialAnalysisType) {
       setSelectedTemplateId(initialAnalysisType);
     }
 
-    if (dataToUse && dataToUse.length > 0) {
-      const normalized = normalizeRows(dataToUse);
-      const headers = headersToUse && headersToUse.length > 0
-        ? headersToUse
+    if (initialParsedData && initialParsedData.length > 0) {
+      const normalized = normalizeRows(initialParsedData);
+      const headers = initialDataHeaders && initialDataHeaders.length > 0
+        ? initialDataHeaders
         : Object.keys(normalized[0] || {});
       setParsedData(normalized);
       setDataHeaders(headers);
       resetVisualState();
-      showSuccess("Data loaded for analysis!");
-
-      if (initialAnalysisType) {
-        handlePerformAnalysis(initialAnalysisType, normalized, headers);
-      }
-    } else if (initialAnalysisType) {
-      showError("Please upload data to perform this analysis.");
+      showSuccess("Imported data ready for analysis.");
     } else {
-      const dummyData = [
-        { id: 1, category: "Electronics", sales: 100, profit: 20, region: "East" },
-        { id: 2, category: "Clothing", sales: 150, profit: 25, region: "West" },
-        { id: 3, category: "Electronics", sales: 70, profit: 18, region: "North" },
-        { id: 4, category: "Books", sales: 200, profit: 30, region: "South" },
-        { id: 5, category: "Clothing", sales: 120, profit: 22, region: "East" },
-        { id: 6, category: "Books", sales: 90, profit: 15, region: "West" },
-        { id: 7, category: "Electronics", sales: 110, profit: 21, region: "North" },
-        { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
-      ];
-      const normalizedDummyData = normalizeRows(dummyData as Record<string, unknown>[]);
-      const dummyHeaders = ["id", "category", "sales", "profit", "region"];
-      setParsedData(normalizedDummyData);
-      setDataHeaders(dummyHeaders);
+      const normalizedDemo = normalizeRows(curatedDemoRaw);
+      setParsedData(normalizedDemo);
+      setDataHeaders(curatedDemoHeaders);
       setSelectedChartType("BarChart");
-      setSelectedXAxis("category");
-      setSelectedYAxis("sales");
-      setCurrentChart({ type: "BarChart", xAxis: "category", yAxis: "sales" });
-      showSuccess("Loaded demo data for analysis.");
+      setSelectedXAxis("segment");
+      setSelectedYAxis("conversion_rate");
+      setCurrentChart({ type: "BarChart", xAxis: "segment", yAxis: "conversion_rate" });
+      setChartBuilds(0);
+      showSuccess("Loaded the curated demo dataset. Upload your own file to replace it.");
     }
   }, [initialParsedData, initialDataHeaders, initialAnalysisType]);
+
+  const dataDrivenTemplates = useMemo(
+    () => analysisTemplates.filter((template) => template.requiresFile),
+    [],
+  );
 
   const handleTemplateSelect = (template: AnalysisTemplate) => {
     setSelectedTemplateId(template.analysisType);
@@ -148,6 +215,19 @@ const DataAnalysis = () => {
     setDataHeaders([]);
     resetVisualState();
     parseFile(file);
+  };
+
+  const loadDemoDataset = () => {
+    const normalized = normalizeRows(curatedDemoRaw);
+    setParsedData(normalized);
+    setDataHeaders(curatedDemoHeaders);
+    setSelectedFile(null);
+    setSelectedChartType("BarChart");
+    setSelectedXAxis("segment");
+    setSelectedYAxis("conversion_rate");
+    setCurrentChart({ type: "BarChart", xAxis: "segment", yAxis: "conversion_rate" });
+    setChartBuilds(0);
+    showSuccess("Demo dataset reloaded. Try the agents on your own data next!");
   };
 
   const parseFile = (file: File) => {
@@ -254,7 +334,11 @@ const DataAnalysis = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
+        body: JSON.stringify({
+          data: currentData.slice(0, DEMO_ROW_LIMIT),
+          headers: currentHeaders,
+          analysisType,
+        }),
       });
 
       if (!response.ok) {
@@ -276,7 +360,13 @@ const DataAnalysis = () => {
   };
 
   const handleBuildChart = (chartType: string, xAxis: string, yAxis: string) => {
+    if (isChartLimitReached) {
+      showError("Demo limit reached. Request the full intelligence engagement for unlimited visualizations.");
+      return;
+    }
+
     setCurrentChart({ type: chartType, xAxis, yAxis });
+    setChartBuilds((prev) => prev + 1);
     showSuccess(`Generated ${chartType.replace("Chart", " chart")} for ${xAxis} vs ${yAxis}!`);
   };
 
@@ -398,10 +488,11 @@ const DataAnalysis = () => {
   };
 
   const generateDataSummary = () => {
-    if (parsedData.length === 0) return "No data available.";
+    if (previewData.length === 0) return "No data available.";
     const numRows = parsedData.length;
+    const previewRows = previewData.length;
     const numCols = dataHeaders.length;
-    return `Your dataset contains ${numRows} rows and ${numCols} columns. Key columns include: ${dataHeaders
+    return `Your dataset currently shows ${previewRows} of ${numRows} rows across ${numCols} columns. Highlighted fields: ${dataHeaders
       .slice(0, 3)
       .join(", ")}${numCols > 3 ? "..." : ""}.`;
   };
@@ -416,17 +507,148 @@ const DataAnalysis = () => {
       return;
     }
 
-    handlePerformAnalysis(selectedTemplate.analysisType, parsedData, dataHeaders);
+    handlePerformAnalysis(selectedTemplate.analysisType, previewData, dataHeaders);
   };
 
+  const analysisPreview = useMemo(() => {
+    if (!analysisReport) return null;
+    if (analysisReport.length <= 1000) return analysisReport;
+    return `${analysisReport.slice(0, 1000)}…`;
+  }, [analysisReport]);
+
+  const steps = [
+    {
+      id: 1,
+      title: "Select an AI mission",
+      description: "Choose the agent-led workflow that best matches your business question.",
+      complete: Boolean(selectedTemplateId),
+    },
+    {
+      id: 2,
+      title: "Upload or explore data",
+      description: `Work with CSV or Excel files. Demo previews are capped at ${DEMO_ROW_LIMIT} rows for speed.`,
+      complete: parsedData.length > 0,
+    },
+    {
+      id: 3,
+      title: "Review guided insights",
+      description: "Preview visualisations, AI summaries, and conversational analysis.",
+      complete: Boolean(analysisReport),
+    },
+  ];
+
   return (
-    <SectionWrapper className="space-y-10 py-10">
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Pick a Template</CardTitle>
+    <SectionWrapper className="space-y-12 py-12">
+      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary via-primary/80 to-primary/60 text-primary-foreground">
+          <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
+          <div className="relative space-y-6 p-8 sm:p-10">
+            <Badge variant="secondary" className="bg-white/20 text-white">Demo Workspace</Badge>
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold sm:text-4xl">
+                Agentic Data Intelligence Studio
+              </h1>
+              <p className="max-w-2xl text-base sm:text-lg">
+                As a computer science graduate obsessed with meaningful insights, I built this agentic workspace to clean, analyse,
+                and narrate complex datasets for teams who crave clarity. Upload your data, pick a mission, and watch the AI agents
+                choreograph the story.
+              </p>
+            </div>
+            <div className="grid gap-4 text-sm sm:grid-cols-2">
+              <div className="flex items-start gap-3">
+                <Sparkles className="mt-0.5 h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Curated AI Playbooks</p>
+                  <p className="text-sm opacity-80">Template-driven flows for cleaning, exploration, and executive briefs.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Demo Safeguards</p>
+                  <p className="text-sm opacity-80">Limited previews keep proprietary pipelines secure until engagement.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <BarChart3 className="mt-0.5 h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Visual Proof</p>
+                  <p className="text-sm opacity-80">Generate a chart and summary before investing in the full build.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Rocket className="mt-0.5 h-5 w-5" />
+                <div>
+                  <p className="font-semibold">End-to-End Agents</p>
+                  <p className="text-sm opacity-80">Cleaning, reasoning, storytelling, and Q&A in a single guided loop.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild className="bg-white text-primary hover:bg-white/90">
+                <Link to="/contact">
+                  Request Full Intelligence
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="secondary" className="bg-white/20 text-white hover:bg-white/30">
+                <Link to="/templates">Explore Missions</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-3xl border bg-card/80 p-6 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2">
+            <Wand2 className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">How the demo flows</h2>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Follow the three steps to showcase the capabilities. Each stage mirrors the production engagement while staying
+            privacy-conscious.
+          </p>
+          <Separator className="my-4" />
+          <div className="space-y-5">
+            {steps.map((step) => (
+              <div key={step.id} className="flex items-start gap-4">
+                <div
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-full border-2",
+                    step.complete
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-muted text-muted-foreground",
+                  )}
+                >
+                  {step.complete ? <Check className="h-4 w-4" /> : step.id}
+                </div>
+                <div>
+                  <p className="font-semibold">{step.title}</p>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Alert className="mt-6 border-primary/40 bg-primary/5">
+            <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Demo Guardrails
+            </AlertTitle>
+            <AlertDescription className="text-xs text-muted-foreground">
+              The sandbox limits previews to {DEMO_ROW_LIMIT} rows, one chart, and {CHAT_DEMO_LIMIT} chat prompts. Engage my services
+              to deploy unrestricted, production-grade pipelines tailored to your organisation.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="rounded-3xl border shadow-sm">
+          <CardHeader className="space-y-1">
+            <Badge variant="outline" className="w-fit uppercase tracking-wide">Step 1</Badge>
+            <CardTitle className="text-2xl font-semibold">Choose Your AI Mission</CardTitle>
             <CardDescription>
-              Choose an AI workflow to guide your analysis. Templates that require a dataset can be run directly below.
+              Select the agent playbook that best aligns with the outcome you want to demo. Each template orchestrates cleaning,
+              exploration, and storytelling in minutes.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
@@ -436,39 +658,48 @@ const DataAnalysis = () => {
                 type="button"
                 onClick={() => handleTemplateSelect(template)}
                 className={cn(
-                  "rounded-lg border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  "group flex h-full flex-col justify-between rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/50",
                   selectedTemplateId === template.analysisType
-                    ? "border-primary bg-primary/10"
+                    ? "border-primary bg-primary/5 shadow-sm"
                     : "hover:border-primary/60",
                 )}
               >
-                <div className="flex items-center gap-3">
-                  <template.icon className="h-6 w-6 text-primary" />
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
-                      {template.category}
-                    </p>
-                    <h3 className="text-lg font-semibold text-foreground">{template.title}</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <template.icon className="h-6 w-6 text-primary" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">{template.category}</p>
+                      <h3 className="text-lg font-semibold text-foreground">{template.title}</h3>
+                    </div>
                   </div>
+                  <p className="text-sm text-muted-foreground">{template.description}</p>
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground">{template.description}</p>
-                <p className="mt-3 text-xs font-medium text-muted-foreground">
-                  {template.steps} step{template.steps !== 1 ? "s" : ""} of guided insight
-                </p>
+                <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{template.steps} guided step{template.steps !== 1 ? "s" : ""}</span>
+                  <span className="font-medium text-primary group-hover:translate-x-1 transition-transform">Try demo →</span>
+                </div>
               </button>
             ))}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Upload Your Dataset</CardTitle>
+        <Card className="rounded-3xl border shadow-sm">
+          <CardHeader className="space-y-1">
+            <Badge variant="outline" className="w-fit uppercase tracking-wide">Step 2</Badge>
+            <CardTitle className="text-2xl font-semibold">Upload or Reuse Data</CardTitle>
             <CardDescription>
-              Drop a CSV or Excel file, preview the data, and run it through the selected template.
+              Swap in your CSV or Excel dataset. The demo processes the first {DEMO_ROW_LIMIT} rows so you can validate the
+              workflow before commissioning the full build.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <FileUploadZone onFileSelect={handleFileSelect} acceptedFileTypes=".csv,.xlsx,.xls" />
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>Tip: Ensure headers are on the first row for best results.</span>
+              <Button size="sm" variant="outline" onClick={loadDemoDataset}>
+                Reload curated demo
+              </Button>
+            </div>
             {isParsingFile && (
               <div className="flex items-center justify-center gap-2 text-primary">
                 <LoadingSpinner size={18} />
@@ -476,7 +707,7 @@ const DataAnalysis = () => {
               </div>
             )}
             {selectedFile && !isParsingFile && (
-              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
                 Loaded <span className="font-medium text-foreground">{selectedFile.name}</span>
                 {parsedData.length > 0 ? ` • ${parsedData.length} rows detected` : ""}
               </div>
@@ -485,18 +716,23 @@ const DataAnalysis = () => {
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Data Preview & Preparation</CardTitle>
+      <div className="grid gap-6 2xl:grid-cols-[1.15fr_0.85fr]">
+        <Card className="rounded-3xl border shadow-sm">
+          <CardHeader className="space-y-1">
+            <Badge variant="outline" className="w-fit uppercase tracking-wide">Step 3</Badge>
+            <CardTitle className="text-2xl font-semibold">Data Preparation & Preview</CardTitle>
             <CardDescription>
-              Inspect your dataset and simulate quick cleaning steps before you run AI-generated insights.
+              Inspect the sample, apply quick clean-up transforms, and confirm the fields powering your AI mission.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {parsedData.length > 0 ? (
+            {previewData.length > 0 ? (
               <>
-                <DataTablePreview data={parsedData} headers={dataHeaders} />
+                <div className="rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  Showing {previewData.length} rows{isPreviewLimited ? ` of ${parsedData.length}` : ""}. Demo previews truncate to
+                  safeguard sensitive information.
+                </div>
+                <DataTablePreview data={previewData} headers={dataHeaders} />
                 <DataTransformation
                   headers={dataHeaders}
                   onTransformData={handleTransformData}
@@ -504,115 +740,120 @@ const DataAnalysis = () => {
                 />
               </>
             ) : (
-              <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
+              <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
                 Upload a dataset to unlock the preview and transformation tools.
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Visual Exploration</CardTitle>
-            <CardDescription>
-              Build charts to understand key relationships in your data before requesting the AI summary.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {parsedData.length > 0 ? (
-              <>
-                <ChartBuilder
-                  headers={dataHeaders}
-                  onBuildChart={handleBuildChart}
-                  selectedChartType={selectedChartType}
-                  setSelectedChartType={setSelectedChartType}
-                  selectedXAxis={selectedXAxis}
-                  setSelectedXAxis={setSelectedXAxis}
-                  selectedYAxis={selectedYAxis}
-                  setSelectedYAxis={setSelectedYAxis}
-                />
-                {currentChart && (
-                  <div className="mt-4">
-                    <h4 className="text-base font-semibold mb-2">Generated Chart</h4>
-                    <ChartDisplay
-                      chartType={currentChart.type}
-                      data={parsedData}
-                      xAxisKey={currentChart.xAxis}
-                      yAxisKey={currentChart.yAxis}
-                    />
+        <div className="space-y-6">
+          <Card className="rounded-3xl border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold">Visual Exploration</CardTitle>
+              <CardDescription>
+                Generate one chart in the demo to showcase how the agents contextualise your metrics.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {previewData.length > 0 ? (
+                <>
+                  <ChartBuilder
+                    headers={dataHeaders}
+                    onBuildChart={handleBuildChart}
+                    selectedChartType={selectedChartType}
+                    setSelectedChartType={setSelectedChartType}
+                    selectedXAxis={selectedXAxis}
+                    setSelectedXAxis={setSelectedXAxis}
+                    selectedYAxis={selectedYAxis}
+                    setSelectedYAxis={setSelectedYAxis}
+                    isDemoLocked={isChartLimitReached}
+                    lockMessage="Unlimited dashboards are available in the full engagement."
+                  />
+                  {currentChart && (
+                    <div className="mt-4 space-y-2">
+                      <h4 className="text-base font-semibold">Generated Chart</h4>
+                      <ChartDisplay
+                        chartType={currentChart.type}
+                        data={previewData}
+                        xAxisKey={currentChart.xAxis}
+                        yAxisKey={currentChart.yAxis}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+                  Charts will appear once you upload data.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold">AI Analysis Snapshot</CardTitle>
+              <CardDescription>
+                Run the selected mission to produce a demo narrative. Unlock the complete briefing with a partnership package.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {selectedTemplate
+                    ? `Ready to run the ${selectedTemplate.title} mission.`
+                    : "Choose a mission to enable AI analysis."}
+                </div>
+                <Button
+                  onClick={handleRunAnalysisClick}
+                  disabled={
+                    !selectedTemplate ||
+                    previewData.length === 0 ||
+                    isLoadingAnalysis ||
+                    isParsingFile
+                  }
+                >
+                  {isLoadingAnalysis ? "Generating..." : selectedTemplate ? `Run ${selectedTemplate.title}` : "Run Analysis"}
+                </Button>
+              </div>
+
+              {isLoadingAnalysis && (
+                <div className="flex items-center justify-center gap-2 text-primary">
+                  <LoadingSpinner size={18} />
+                  <span>Generating AI analysis report...</span>
+                </div>
+              )}
+
+              {analysisPreview && (
+                <div className="space-y-4">
+                  <div className="rounded-xl border bg-muted p-4 text-left text-sm text-muted-foreground whitespace-pre-wrap">
+                    <h4 className="text-base font-semibold text-foreground mb-2">AI Findings (Demo)</h4>
+                    {analysisPreview}
+                    {analysisReport && analysisReport.length > analysisPreview.length && (
+                      <p className="mt-3 text-xs font-medium text-muted-foreground">
+                        Full insights, scenario modelling, and executive-ready decks are reserved for client engagements.
+                      </p>
+                    )}
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
-                Charts will appear once you upload data.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  <Alert variant="default" className="border-primary/50">
+                    <AlertTitle className="text-sm font-semibold">Need deeper insights?</AlertTitle>
+                    <AlertDescription className="text-xs text-muted-foreground">
+                      Book a strategy call to unlock full-length reports, automated slide creation, and integrations with your data
+                      stack.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">AI Analysis Report</CardTitle>
-            <CardDescription>
-              Run the selected template to generate a natural-language summary, risk flags, and opportunities.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-muted-foreground">
-                {selectedTemplate
-                  ? `Ready to run the ${selectedTemplate.title} template.`
-                  : "Choose a template to enable AI analysis."}
-              </div>
-              <Button
-                onClick={handleRunAnalysisClick}
-                disabled={
-                  !selectedTemplate ||
-                  parsedData.length === 0 ||
-                  isLoadingAnalysis ||
-                  isParsingFile
-                }
-              >
-                {isLoadingAnalysis ? "Generating..." : selectedTemplate ? `Run ${selectedTemplate.title}` : "Run Analysis"}
-              </Button>
-            </div>
-
-            {isLoadingAnalysis && (
-              <div className="flex items-center justify-center gap-2 text-primary">
-                <LoadingSpinner size={18} />
-                <span>Generating AI analysis report...</span>
-              </div>
-            )}
-
-            {analysisReport && (
-              <div className="rounded-md border bg-muted p-4 text-left text-sm text-muted-foreground whitespace-pre-wrap">
-                <h4 className="text-base font-semibold text-foreground mb-2">AI Findings</h4>
-                {analysisReport}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Chat with Your Data</CardTitle>
-            <CardDescription>
-              Ask follow-up questions or request tailored summaries based on the current dataset.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {parsedData.length > 0 ? (
-              <AIChatInterface dataHeaders={dataHeaders} dataSummary={generateDataSummary()} />
-            ) : (
-              <div className="rounded-md border border-dashed p-6 text-center text-muted-foreground">
-                Once a dataset is loaded, you can chat with the AI about specific insights.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <AIChatInterface
+            dataHeaders={dataHeaders}
+            dataSummary={generateDataSummary()}
+            maxQuestions={CHAT_DEMO_LIMIT}
+            lockedMessage="Demo chat limit reached. Let's collaborate to deploy an on-demand insights agent for your team."
+          />
+        </div>
       </div>
     </SectionWrapper>
   );

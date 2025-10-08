@@ -18,12 +18,20 @@ interface Message {
 interface AIChatInterfaceProps {
   dataHeaders: string[];
   dataSummary: string; // A summary of the data for AI context
+  maxQuestions?: number;
+  lockedMessage?: string;
 }
 
-const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSummary }) => {
+const AIChatInterface: React.FC<AIChatInterfaceProps> = ({
+  dataHeaders,
+  dataSummary,
+  maxQuestions,
+  lockedMessage,
+}) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
   const [isThinking, setIsThinking] = useState<boolean>(false);
+  const [askedCount, setAskedCount] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -32,13 +40,24 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
 
   useEffect(scrollToBottom, [messages]);
 
+  const isLimitReached = maxQuestions !== undefined && askedCount >= maxQuestions;
+
   const handleSendMessage = async () => {
     if (input.trim() === "") return;
+
+    if (isLimitReached) {
+      toast.info(
+        lockedMessage ||
+          "You've reached the demo conversation limit. Request the full service to continue exploring tailored insights.",
+      );
+      return;
+    }
 
     const userMessage: Message = { id: Date.now().toString(), sender: "user", text: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsThinking(true);
+    setAskedCount((prev) => prev + 1);
 
     try {
       // Construct the prompt for the AI, including data context
@@ -140,13 +159,21 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
                 handleSendMessage();
               }
             }}
-            disabled={isThinking}
+            disabled={isThinking || isLimitReached}
           />
-          <Button onClick={handleSendMessage} disabled={isThinking}>
+          <Button onClick={handleSendMessage} disabled={isThinking || isLimitReached}>
             <Send className="h-4 w-4" />
             <span className="sr-only">Send message</span>
           </Button>
         </div>
+        {maxQuestions !== undefined && (
+          <p className="mt-3 text-xs text-muted-foreground text-center">
+            {isLimitReached
+              ? lockedMessage ||
+                "Demo limit reached. Unlock the agentic workspace to continue an unlimited conversation."
+              : `${maxQuestions - askedCount} of ${maxQuestions} demo questions remaining.`}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

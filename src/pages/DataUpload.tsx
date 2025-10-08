@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import FileUploadZone from "@/components/FileUploadZone";
 import DataTablePreview from "@/components/DataTablePreview";
@@ -9,7 +10,8 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import LoadingSpinner from "@/components/LoadingSpinner"; // Import LoadingSpinner
+import LoadingSpinner from "@/components/LoadingSpinner";
+import SectionWrapper from "@/components/SectionWrapper";
 
 const DataUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -123,34 +125,43 @@ const DataUpload = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-8">
-      <Card className="w-full max-w-5xl">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">Upload Your Data</CardTitle>
-          <CardDescription className="text-center mt-2">
-            Drag and drop your CSV or Excel file here to get started with AI-powered analysis.
+    <SectionWrapper className="py-10">
+      <Card className="mx-auto w-full max-w-5xl rounded-3xl border shadow-sm">
+        <CardHeader className="space-y-4 text-center">
+          <Badge variant="outline" className="mx-auto w-fit uppercase tracking-wide text-primary">Dataset staging</Badge>
+          <CardTitle className="text-3xl font-semibold">Stage your dataset</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            Upload a CSV or Excel file to preview structure, validate headers, and hand it off to the Data Intelligence Studio for
+            mission-driven analysis.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <FileUploadZone onFileSelect={handleFileSelect} acceptedFileTypes=".csv,.xlsx,.xls" />
 
           {isLoading && (
-            <div className="flex items-center justify-center space-x-2 text-primary">
+            <div className="flex items-center justify-center gap-2 text-primary">
               <LoadingSpinner size={20} />
               <span>Parsing file...</span>
             </div>
           )}
 
           {selectedFile && !isLoading && (
-            <div className="mt-4 space-y-4">
-              <h3 className="text-xl font-semibold text-center">
-                Preview of "{selectedFile.name}" ({parsedData.length} rows)
-              </h3>
+            <div className="space-y-4">
+              <div className="rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">{selectedFile.name}</span> • {parsedData.length} rows detected •
+                  {" "}
+                  {dataHeaders.length} columns ready for mapping.
+                </p>
+              </div>
               <DataTablePreview data={parsedData} headers={dataHeaders} />
               {parsedData.length > 0 && (
-                <div className="text-center">
-                  <Button size="lg" className="mt-4" onClick={handleProceedToAnalysis}>
-                    Proceed to Analysis
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Looks good? Continue to the Data Analysis workspace to assign a mission and generate insights.
+                  </p>
+                  <Button size="lg" onClick={handleProceedToAnalysis}>
+                    Continue to analysis studio
                   </Button>
                 </div>
               )}
@@ -158,7 +169,7 @@ const DataUpload = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </SectionWrapper>
   );
 };
 

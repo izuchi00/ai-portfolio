@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Search } from "lucide-react";
 import SectionWrapper from "@/components/SectionWrapper";
 import { cn } from "@/lib/utils";
@@ -42,63 +43,90 @@ const Templates = () => {
   };
 
   return (
-    <SectionWrapper className="space-y-8 py-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-primary">AI Analysis Templates</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Select any template, swap in your dataset, and run the analysis.
+    <SectionWrapper className="space-y-10 py-10">
+      <div className="relative overflow-hidden rounded-3xl border bg-muted/40 p-8 text-center">
+        <Badge variant="outline" className="mx-auto mb-4 w-fit uppercase tracking-wide text-primary">AI Missions Library</Badge>
+        <h1 className="text-4xl font-semibold text-foreground">Choose an agentic workflow</h1>
+        <p className="mt-3 text-lg text-muted-foreground max-w-3xl mx-auto">
+          Each mission blends generative and analytical intelligence to help teams struggling with data move from raw files to
+          confident decisions. Preview the demo or engage me to deploy the full pipeline for your organisation.
         </p>
       </div>
 
-      <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row gap-4">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
         <Input
           type="text"
-          placeholder="Search templates..."
+          placeholder="Search missions..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-grow"
           icon={<Search className="h-4 w-4 text-muted-foreground" />}
         />
-      </div>
-
-      <div className="w-full max-w-4xl mx-auto flex flex-wrap gap-2 justify-center">
-        <Badge
-          variant={activeCategory === "All" ? "default" : "secondary"}
-          className={cn("cursor-pointer px-4 py-2 text-sm", activeCategory === "All" && "bg-primary text-primary-foreground")}
-          onClick={() => setActiveCategory("All")}
-        >
-          All
-        </Badge>
-        {categories.map((category) => (
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <Badge
-            key={category}
-            variant={activeCategory === category ? "default" : "secondary"}
-            className={cn("cursor-pointer px-4 py-2 text-sm", activeCategory === category && "bg-primary text-primary-foreground")}
-            onClick={() => setActiveCategory(category)}
+            variant={activeCategory === "All" ? "default" : "secondary"}
+            className={cn(
+              "cursor-pointer px-4 py-1.5 text-sm",
+              activeCategory === "All" && "bg-primary text-primary-foreground",
+            )}
+            onClick={() => setActiveCategory("All")}
           >
-            {category}
+            All missions
           </Badge>
-        ))}
+          {categories.map((category) => (
+            <Badge
+              key={category}
+              variant={activeCategory === category ? "default" : "secondary"}
+              className={cn(
+                "cursor-pointer px-4 py-1.5 text-sm",
+                activeCategory === category && "bg-primary text-primary-foreground",
+              )}
+              onClick={() => setActiveCategory(category)}
+            >
+              {category}
+            </Badge>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl mx-auto">
+      <Alert className="mx-auto w-full max-w-4xl border-primary/40 bg-primary/5">
+        <AlertTitle className="text-sm font-semibold">Demo guardrails</AlertTitle>
+        <AlertDescription className="text-sm text-muted-foreground">
+          Missions preview limited datasets, a single chart, and three chat prompts. Partner with me to unlock end-to-end,
+          production deployments tuned to your stack.
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 mx-auto">
         {filteredTemplates.length > 0 ? (
           filteredTemplates.map((template) => (
-            <Card key={template.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
-              <CardHeader className="flex-row items-center space-x-4 pb-2">
-                <template.icon className="h-8 w-8 text-primary" />
+            <Card key={template.id} className="flex h-full flex-col justify-between rounded-3xl border shadow-sm">
+              <CardHeader className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary" className="flex items-center gap-2 text-xs">
+                    <template.icon className="h-4 w-4 text-primary" />
+                    {template.category}
+                  </Badge>
+                  {template.requiresFile ? (
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Dataset required</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-wide">Realtime agent</Badge>
+                  )}
+                </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold">{template.title}</CardTitle>
-                  <CardDescription className="text-sm text-muted-foreground">{template.steps} step{template.steps !== 1 ? "s" : ""}</CardDescription>
+                  <CardTitle className="text-2xl font-semibold text-foreground">{template.title}</CardTitle>
+                  <CardDescription className="text-sm text-muted-foreground">
+                    {template.steps} step{template.steps !== 1 ? "s" : ""} of guided intelligence
+                  </CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between pt-2">
-                <p className="text-muted-foreground text-sm mb-4">{template.description}</p>
-                <div className="flex flex-col gap-2 mt-auto">
+              <CardContent className="flex flex-1 flex-col justify-between space-y-4">
+                <p className="text-sm text-muted-foreground leading-relaxed">{template.description}</p>
+                <div className="flex flex-col gap-2">
                   {template.requiresFile && (
-                    <Link to="/upload-data">
-                      <Button variant="outline" className="w-full">Select a file</Button>
-                    </Link>
+                    <Button variant="outline" className="w-full" onClick={() => navigate("/data-analysis", { state: { analysisType: template.analysisType } })}>
+                      Jump to demo workspace
+                    </Button>
                   )}
                   <Button className="w-full" onClick={() => handleRunReport(template)}>
                     {template.actionText}
@@ -108,7 +136,7 @@ const Templates = () => {
             </Card>
           ))
         ) : (
-          <p className="col-span-full text-center text-muted-foreground text-lg">No templates found matching your criteria.</p>
+          <p className="col-span-full text-center text-muted-foreground text-lg">No missions found. Try a different filter.</p>
         )}
       </div>
     </SectionWrapper>
