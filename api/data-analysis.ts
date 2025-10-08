@@ -189,15 +189,20 @@ Generate a simulated traffic acquisition report. This analysis typically require
         aiResponseText = groqData.choices?.[0]?.message?.content ?? 'No text generated from Groq.';
         providerUsed = 'groq';
       }
-    } catch (groqError: any) {
+    } catch (groqError: unknown) {
+      const errorMessage =
+        groqError instanceof Error
+          ? groqError.message
+          : 'Internal Server Error during Groq API call for data analysis.';
       console.error('Error calling Groq API for data analysis:', groqError);
-      return res.status(500).json({ error: groqError?.message || 'Internal Server Error during Groq API call for data analysis.' });
+      return res.status(500).json({ error: errorMessage });
     }
 
     return res.status(200).json({ report: aiResponseText, provider: providerUsed });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Internal Server Error';
     console.error('Data analysis function error:', err);
-    return res.status(500).json({ error: err?.message || 'Internal Server Error' });
+    return res.status(500).json({ error: errorMessage });
   }
 }

@@ -2,3 +2,8 @@ fastapi
 uvicorn[standard]
 pandas
 numpy
+seaborn
+scikit-learn
+plotly
+matplotlib
+kaleido

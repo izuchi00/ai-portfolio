@@ -1,243 +1,220 @@
 "use client";
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
-  FileText,
-  BarChart2,
-  Search,
-  FlaskConical,
-  LineChart,
-  AlertTriangle,
-  Smile,
-  Type,
-  Languages,
-  Globe,
-  Sparkles,
-  UploadCloud,
-} from "lucide-react";
-import SectionWrapper from "@/components/SectionWrapper";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+  analysisStages,
+  analysisTasks,
+  intelligencePathways,
+  missionIcons,
+} from "@/data/analysisStages";
+import { ArrowRight, Filter, Search, Sparkles } from "lucide-react";
 
-interface Template {
-  id: string;
-  title: string;
-  description: string;
-  steps: number;
-  icon: React.ElementType;
-  category: string;
-  analysisType: string; // Corresponds to the backend analysis type
-  requiresFile: boolean;
-  actionText: string;
-}
-
-const templates: Template[] = [
-  {
-    id: "data-prep-cleaning",
-    title: "Data Prep / Cleaning",
-    description: "Clean and organize the dataset to be analysis-ready.",
-    steps: 1,
-    icon: UploadCloud,
-    category: "Data Preparation",
-    analysisType: "data_preparation",
-    requiresFile: true,
-    actionText: "Run Report",
-  },
-  {
-    id: "exploratory-analysis",
-    title: "Exploratory Analysis",
-    description: "Conduct an exploratory analysis - basic descriptive stats and data visualizations.",
-    steps: 3,
-    icon: FlaskConical,
-    category: "Exploratory Analysis",
-    analysisType: "exploratory_analysis",
-    requiresFile: true,
-    actionText: "Run Report",
-  },
-  {
-    id: "data-viz-analysis",
-    title: "Data Visualization & Analysis",
-    description: "Create and analyze data visualizations, highlighting trends and insights for each chart.",
-    steps: 2,
-    icon: BarChart2,
-    category: "Data Visualization",
-    analysisType: "data_visualization",
-    requiresFile: true,
-    actionText: "Run Report",
-  },
-  {
-    id: "correlation-analysis",
-    title: "Correlation Analysis",
-    description: "Show the relationship between multiple variables in a dataset by calculating their correlation.",
-    steps: 2,
-    icon: LineChart,
-    category: "Data Visualization",
-    analysisType: "correlation_analysis",
-    requiresFile: true,
-    actionText: "Run Report",
-  },
-  {
-    id: "anomaly-detection",
-    title: "Anomaly Detection",
-    description: "Identify data points that deviate from the norm.",
-    steps: 2,
-    icon: AlertTriangle,
-    category: "Data Analysis",
-    analysisType: "anomaly_detection",
-    requiresFile: true,
-    actionText: "Run Report",
-  },
-  {
-    id: "sentiment-analysis",
-    title: "Sentiment Analysis",
-    description: "Analyze the emotional tone of text (customer reviews) - positive, negative or neutral.",
-    steps: 1,
-    icon: Smile,
-    category: "Qualitative Analysis",
-    analysisType: "sentiment_analysis",
-    requiresFile: false, // This will be handled by TextAnalysis page
-    actionText: "Go to Tool",
-  },
-  {
-    id: "text-extraction",
-    title: "Text Extraction",
-    description: "Extract specific items from a block of text (ie: person's name, company name, address).",
-    steps: 1,
-    icon: Type,
-    category: "Qualitative Analysis",
-    analysisType: "text_extraction",
-    requiresFile: false, // This will be handled by TextAnalysis page
-    actionText: "Go to Tool",
-  },
-  {
-    id: "language-translation",
-    title: "Language Translation",
-    description: "Translate text from any language to any language.",
-    steps: 0,
-    icon: Languages,
-    category: "Qualitative Analysis",
-    analysisType: "language_translation",
-    requiresFile: false, // This will be handled by TextAnalysis page
-    actionText: "Go to Tool",
-  },
-  {
-    id: "traffic-acquisition",
-    title: "Traffic Acquisition Report",
-    description: "Find your website's top acquisition traffic sources.",
-    steps: 1,
-    icon: Globe,
-    category: "Marketing",
-    analysisType: "traffic_acquisition",
-    requiresFile: false, // This would require external API integration
-    actionText: "Connect Analytics",
-  },
-];
-
-const categories = Array.from(new Set(templates.map((t) => t.category)));
-
-const Templates = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+const Templates: React.FC = () => {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [stageFilter, setStageFilter] = useState<string>("all");
 
-  const filteredTemplates = templates.filter((template) => {
-    const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          template.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = activeCategory === "All" || template.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleRunReport = (template: Template) => {
-    if (template.requiresFile) {
-      // For templates requiring a file, navigate to DataAnalysis with the analysisType
-      // The DataAnalysis page will then check if data is present or prompt for upload
-      navigate("/data-analysis", { state: { analysisType: template.analysisType } });
-    } else if (template.analysisType === "sentiment_analysis" || template.analysisType === "text_extraction" || template.analysisType === "language_translation") {
-      // For text-based tools, navigate to TextAnalysis page
-      navigate("/text-analysis", { state: { analysisType: template.analysisType } });
-    } else if (template.analysisType === "traffic_acquisition") {
-      toast.info("This feature requires connecting to an analytics platform (e.g., Google Analytics).");
-    } else {
-      toast.info(`Action for "${template.title}" not yet fully implemented.`);
-    }
-  };
+  const filteredTasks = useMemo(() => {
+    return analysisTasks.filter((task) => {
+      const matchesStage = stageFilter === "all" || task.stage === stageFilter;
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.description.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStage && matchesSearch;
+    });
+  }, [searchTerm, stageFilter]);
 
   return (
-    <SectionWrapper className="space-y-8 py-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-primary">AI Analysis Templates</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Select any template, swap in your dataset, and run the analysis.
-        </p>
-      </div>
-
-      <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row gap-4">
-        <Input
-          type="text"
-          placeholder="Search templates..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-grow"
-          icon={<Search className="h-4 w-4 text-muted-foreground" />}
-        />
-      </div>
-
-      <div className="w-full max-w-4xl mx-auto flex flex-wrap gap-2 justify-center">
-        <Badge
-          variant={activeCategory === "All" ? "default" : "secondary"}
-          className={cn("cursor-pointer px-4 py-2 text-sm", activeCategory === "All" && "bg-primary text-primary-foreground")}
-          onClick={() => setActiveCategory("All")}
-        >
-          All
-        </Badge>
-        {categories.map((category) => (
-          <Badge
-            key={category}
-            variant={activeCategory === category ? "default" : "secondary"}
-            className={cn("cursor-pointer px-4 py-2 text-sm", activeCategory === category && "bg-primary text-primary-foreground")}
-            onClick={() => setActiveCategory(category)}
-          >
-            {category}
+    <div className="space-y-12">
+      <Card className="rounded-3xl border border-border/70 bg-muted/30">
+        <CardHeader className="space-y-4 text-left">
+          <Badge variant="outline" className="w-fit rounded-full px-4 py-1 text-xs uppercase tracking-[0.5em] text-primary">
+            Agentic mission library
           </Badge>
-        ))}
+          <CardTitle className="text-3xl font-semibold md:text-4xl">
+            Curated demos that let recruiters experience the impact fast
+          </CardTitle>
+          <CardDescription className="max-w-3xl text-base text-muted-foreground">
+            Each template combines data staging, Python-powered analytics, and AI narration. Select a tier, stage a dataset,
+            and run a limited showcase—then partner with me to unlock end-to-end automation.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr,0.7fr]">
+        <Card className="rounded-3xl border border-border/70 bg-background/95">
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <CardTitle className="text-2xl font-semibold">Mission catalogue</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Filter the demo deliverables and add them to your run inside the Data Intelligence Studio.
+              </CardDescription>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search missions (e.g. segmentation, anomaly)"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={stageFilter === "all" ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => setStageFilter("all")}
+                  >
+                    All tiers
+                  </Button>
+                  {analysisStages.map((stage) => (
+                    <Button
+                      key={stage.id}
+                      size="sm"
+                      variant={stageFilter === stage.id ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => setStageFilter(stage.id)}
+                    >
+                      {stage.title}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            {filteredTasks.length > 0 ? (
+              filteredTasks.map((task) => {
+                const stage = analysisStages.find((item) => item.id === task.stage);
+                return (
+                  <Card key={task.id} className="h-full rounded-2xl border border-border/60 bg-muted/30">
+                    <CardHeader className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+                          {stage?.title}
+                        </Badge>
+                        <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.3em]">
+                          {stage?.subtitle}
+                        </Badge>
+                      </div>
+                      <CardTitle className="text-xl font-semibold">{task.title}</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground">
+                        {task.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+                        Demo deliverables
+                      </div>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        {task.outcomes.map((outcome) => (
+                          <li key={outcome}>{outcome}</li>
+                        ))}
+                      </ul>
+                      <Button
+                        size="sm"
+                        className="mt-4 w-full rounded-full"
+                        onClick={() => navigate("/data-analysis", { state: { stage: task.stage } })}
+                      >
+                        Add to studio run
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="col-span-full rounded-2xl border border-dashed border-border/60 p-10 text-center text-sm text-muted-foreground">
+                No missions match your filters. Try another tier or search term.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border border-border/70 bg-muted/30">
+          <CardHeader className="space-y-4">
+            <div className="flex items-center gap-2 text-primary">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-xs uppercase tracking-[0.3em]">Playbook highlights</span>
+            </div>
+            <CardTitle className="text-2xl font-semibold">Business intelligence pathways</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Pick a pathway to show prospects how the studio unblocks their exact bottleneck.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {intelligencePathways.map((pathway) => {
+              const Icon = missionIcons[pathway.category] ?? Sparkles;
+              return (
+                <Card key={pathway.id} className="rounded-2xl border border-border/60 bg-background/95">
+                  <CardHeader className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">{pathway.category}</p>
+                        <CardTitle className="text-lg font-semibold">{pathway.title}</CardTitle>
+                      </div>
+                    </div>
+                    <CardDescription className="text-sm text-muted-foreground">{pathway.excerpt}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary">
+                      {pathway.impact}
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full"
+                      onClick={() => navigate("/data-analysis", { state: { stage: pathway.level } })}
+                    >
+                      Run this pathway <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl mx-auto">
-        {filteredTemplates.length > 0 ? (
-          filteredTemplates.map((template) => (
-            <Card key={template.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
-              <CardHeader className="flex-row items-center space-x-4 pb-2">
-                <template.icon className="h-8 w-8 text-primary" />
-                <div>
-                  <CardTitle className="text-xl font-semibold">{template.title}</CardTitle>
-                  <CardDescription className="text-sm text-muted-foreground">{template.steps} step{template.steps !== 1 ? "s" : ""}</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between pt-2">
-                <p className="text-muted-foreground text-sm mb-4">{template.description}</p>
-                <div className="flex flex-col gap-2 mt-auto">
-                  {template.requiresFile && (
-                    <Link to="/upload-data">
-                      <Button variant="outline" className="w-full">Select a file</Button>
-                    </Link>
-                  )}
-                  <Button className="w-full" onClick={() => handleRunReport(template)}>
-                    {template.actionText}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <p className="col-span-full text-center text-muted-foreground text-lg">No templates found matching your criteria.</p>
-        )}
-      </div>
-    </SectionWrapper>
+      <Card className="rounded-3xl border border-primary/40 bg-primary/10">
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-2xl text-left">
+            <h3 className="text-2xl font-semibold text-primary">Need a fully bespoke agentic workflow?</h3>
+            <p className="text-sm text-primary/80">
+              I design automated agents that stage data, run analytics, and deliver human-ready narratives. Book a discovery call to co-create your roadmap.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button className="rounded-full px-6" onClick={() => navigate("/contact")}>
+              Book a discovery call
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full border-primary/40 px-6 text-primary"
+              onClick={() => navigate("/about")}
+            >
+              Learn about my process
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

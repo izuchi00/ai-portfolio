@@ -1,341 +1,500 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { showSuccess, showError } from "@/utils/toast";
-import ChartBuilder from "@/components/ChartBuilder";
-import ChartDisplay from "@/components/ChartDisplay";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import FileUploadZone from "@/components/FileUploadZone";
 import DataTablePreview from "@/components/DataTablePreview";
-import AIChatInterface from "@/components/AIChatInterface";
-import DataTransformation from "@/components/DataTransformation";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { analysisStages, analysisTasks, AnalysisStageId } from "@/data/analysisStages";
+import { runPortfolioAnalysis, PortfolioAnalysisResponse } from "@/lib/hf-client";
+import { cn } from "@/lib/utils";
+import { ArrowRight, CheckCircle2, UploadCloud, Zap } from "lucide-react";
 
-const DataAnalysis = () => {
+const DEMO_ANALYSIS_LIMIT = 1;
+const DEMO_PREVIEW_LIMIT = 200;
+
+const curatedSampleRows: Record<string, unknown>[] = [
+  {
+    segment: "Recruitment",
+    records: 982,
+    conversion_rate: 0.34,
+    churn_risk: 0.07,
+    avg_deal_cycle_days: 42,
+    pipeline_value: 1.2,
+    satisfaction: 78,
+  },
+  {
+    segment: "Customer Success",
+    records: 764,
+    conversion_rate: 0.28,
+    churn_risk: 0.12,
+    avg_deal_cycle_days: 55,
+    pipeline_value: 0.95,
+    satisfaction: 83,
+  },
+  {
+    segment: "Enterprise",
+    records: 521,
+    conversion_rate: 0.41,
+    churn_risk: 0.09,
+    avg_deal_cycle_days: 68,
+    pipeline_value: 2.8,
+    satisfaction: 72,
+  },
+  {
+    segment: "Startups",
+    records: 1254,
+    conversion_rate: 0.26,
+    churn_risk: 0.15,
+    avg_deal_cycle_days: 37,
+    pipeline_value: 0.64,
+    satisfaction: 81,
+  },
+];
+
+const parseDataset = async (file: File): Promise<{ rows: Record<string, unknown>[]; headers: string[] }> => {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (!result) {
+        reject(new Error("Unable to read file."));
+        return;
+      }
+
+      if (extension === "csv") {
+        Papa.parse(result as string, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (parsed) => {
+            const rows = parsed.data as Record<string, unknown>[];
+            const headers = rows.length > 0 ? Object.keys(rows[0]!) : [];
+            resolve({ rows, headers });
+          },
+          error: (err) => reject(err),
+        });
+      } else if (extension === "xlsx" || extension === "xls") {
+        try {
+          const workbook = XLSX.read(result, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+          const headers = json.length > 0 ? Object.keys(json[0]!) : [];
+          resolve({ rows: json, headers });
+        } catch (error) {
+          reject(error);
+        }
+      } else {
+        reject(new Error("Unsupported file type. Upload CSV or Excel."));
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Unable to read file."));
+
+    if (extension === "csv") {
+      reader.readAsText(file);
+    } else {
+      reader.readAsBinaryString(file);
+    }
+  });
+};
+
+const DataAnalysis: React.FC = () => {
   const location = useLocation();
-  const { parsedData: initialParsedData, dataHeaders: initialDataHeaders, analysisType: initialAnalysisType } = (location.state || {}) as {
-    parsedData?: Record<string, string>[];
-    dataHeaders?: string[];
-    analysisType?: string; // New: analysisType from Templates page
+  const locationState = location.state as
+    | { stage?: AnalysisStageId; dataset?: Record<string, unknown>[]; headers?: string[] }
+    | undefined;
+  const initialStage = locationState?.stage ?? "basic";
+  const initialRows =
+    locationState?.dataset && locationState.dataset.length > 0
+      ? locationState.dataset
+      : curatedSampleRows;
+  const initialHeaders =
+    locationState?.headers && locationState.headers.length > 0
+      ? locationState.headers
+      : Object.keys(initialRows[0] ?? {});
+
+  const [selectedStage, setSelectedStage] = useState<AnalysisStageId>(initialStage);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>(
+    analysisTasks.filter((task) => task.stage === initialStage).slice(0, 2).map((task) => task.id),
+  );
+  const [rows, setRows] = useState<Record<string, unknown>[]>(initialRows);
+  const [headers, setHeaders] = useState<string[]>(initialHeaders);
+  const [isParsing, setIsParsing] = useState(false);
+  const [analysisRuns, setAnalysisRuns] = useState(0);
+  const [result, setResult] = useState<PortfolioAnalysisResponse | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedStage(initialStage);
+    const defaults = analysisTasks.filter((task) => task.stage === initialStage).slice(0, 2).map((task) => task.id);
+    setSelectedTasks(defaults);
+  }, [initialStage]);
+
+  useEffect(() => {
+    if (locationState?.dataset && locationState.dataset.length > 0) {
+      setRows(locationState.dataset);
+      setHeaders(locationState.headers && locationState.headers.length > 0
+        ? locationState.headers
+        : Object.keys(locationState.dataset[0] ?? {}));
+      toast.success("Dataset imported from staging. Ready when you are.");
+    }
+  }, [locationState?.dataset, locationState?.headers]);
+
+  const previewRows = useMemo(() => rows.slice(0, DEMO_PREVIEW_LIMIT), [rows]);
+  const previewLimited = rows.length > DEMO_PREVIEW_LIMIT;
+
+  const availableTasks = useMemo(
+    () => analysisTasks.filter((task) => task.stage === selectedStage),
+    [selectedStage],
+  );
+
+  const handleStageSelect = (stage: AnalysisStageId) => {
+    setSelectedStage(stage);
+    const defaults = analysisTasks.filter((task) => task.stage === stage).slice(0, 2).map((task) => task.id);
+    setSelectedTasks(defaults);
+    setResult(null);
   };
 
-  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
-  const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
-  const [parsedData, setParsedData] = useState<Record<string, any>[]>([]);
-  const [dataHeaders, setDataHeaders] = useState<string[]>([]);
-  const [analysisReport, setAnalysisReport] = useState<string | null>(null); // Simplified to string
+  const toggleTask = (taskId: string) => {
+    setSelectedTasks((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId],
+    );
+  };
 
-  const [selectedChartType, setSelectedChartType] = useState<string>("");
-  const [selectedXAxis, setSelectedXAxis] = useState<string>("");
-  const [selectedYAxis, setSelectedYAxis] = useState<string>("");
-  const [currentChart, setCurrentChart] = useState<{ type: string; xAxis: string; yAxis: string } | null>(null);
-
-  // Effect to load data and potentially trigger analysis
-  useEffect(() => {
-    let dataToUse = initialParsedData;
-    let headersToUse = initialDataHeaders;
-
-    if (dataToUse && dataToUse.length > 0) {
-      // Convert string values to numbers for charting if possible
-      const numericParsedData = dataToUse.map(row => {
-        const newRow: Record<string, any> = {};
-        for (const key in row) {
-          const value = row[key];
-          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
-        }
-        return newRow;
-      });
-      setParsedData(numericParsedData);
-      setDataHeaders(headersToUse || []);
-      showSuccess("Data loaded for analysis!");
-
-      // Automatically trigger analysis if an analysisType is provided from Templates page
-      if (initialAnalysisType) {
-        handlePerformAnalysis(initialAnalysisType, numericParsedData, headersToUse || []);
+  const handleFileSelect = useCallback(async (file: File) => {
+    try {
+      setIsParsing(true);
+      const parsed = await parseDataset(file);
+      if (parsed.rows.length === 0) {
+        toast.error("No data detected in the uploaded file.");
+        return;
       }
-    } else if (initialAnalysisType) {
-      // If an analysis type was requested but no data was provided, prompt user to upload
-      showError("Please upload data to perform this analysis.");
-      // Optionally, navigate to upload page or show a specific message in UI
-      // For now, we'll just show the "No data uploaded yet" message below.
-    } else {
-      // If no data and no specific analysis type, load dummy data for demo
-      const dummyData = [
-        { id: 1, category: "Electronics", sales: 100, profit: 20, region: "East" },
-        { id: 2, category: "Clothing", sales: 150, profit: 25, region: "West" },
-        { id: 3, category: "Electronics", sales: 70, profit: 18, region: "North" },
-        { id: 4, category: "Books", sales: 200, profit: 30, region: "South" },
-        { id: 5, category: "Clothing", sales: 120, profit: 22, region: "East" },
-        { id: 6, category: "Books", sales: 90, profit: 15, region: "West" },
-        { id: 7, category: "Electronics", sales: 110, profit: 21, region: "North" },
-        { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
-      ];
-      const dummyHeaders = ["id", "category", "sales", "profit", "region"];
-      const numericDummyData = dummyData.map(row => {
-        const newRow: Record<string, any> = {};
-        for (const key in row) {
-          const value = row[key];
-          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
-        }
-        return newRow;
-      });
-      setParsedData(numericDummyData);
-      setDataHeaders(dummyHeaders);
-      setSelectedChartType("BarChart");
-      setSelectedXAxis("category");
-      setSelectedYAxis("sales");
-      setCurrentChart({ type: "BarChart", xAxis: "category", yAxis: "sales" });
-      showSuccess("Loaded demo data for analysis.");
+      setRows(parsed.rows);
+      setHeaders(parsed.headers);
+      setResult(null);
+      toast.success("Dataset parsed successfully. Ready for analysis.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to parse file.";
+      toast.error(message);
+    } finally {
+      setIsParsing(false);
     }
-  }, [initialParsedData, initialDataHeaders, initialAnalysisType]);
+  }, []);
 
-
-  const handlePerformAnalysis = async (analysisType: string, currentData: Record<string, any>[], currentHeaders: string[]) => {
-    if (currentData.length === 0) {
-      showError("No data available for analysis. Please upload a file first.");
+  const runAnalysis = async () => {
+    if (rows.length === 0) {
+      toast.error("Upload a dataset or use the curated demo first.");
       return;
     }
 
-    setIsLoadingAnalysis(true);
-    setAnalysisReport(null); // Clear previous report
+    if (analysisRuns >= DEMO_ANALYSIS_LIMIT) {
+      toast.info("Demo limit reached. Book a call to unlock unlimited runs.");
+      return;
+    }
+
+    setIsRunning(true);
+    setErrorMessage(null);
 
     try {
-      // All analysis types will now go through the LLM backend for descriptive reports
-      const response = await fetch('/api/data-analysis', { // This is the LLM endpoint
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: currentData, headers: currentHeaders, analysisType }),
+      const response = await runPortfolioAnalysis({
+        data: rows,
+        stage: selectedStage,
+        tasks: selectedTasks,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error performing AI analysis:", errorData);
-        showError("Failed to get AI analysis: " + (errorData.error || response.statusText));
-      } else {
-        const result = await response.json();
-        setAnalysisReport(result.report); // LLM backend returns a string in 'report' field
-        showSuccess(`AI ${analysisType.replace(/_/g, ' ')} analysis complete!`);
-      }
-    } catch (error: any) {
-      console.error("Unexpected error during analysis:", error);
-      showError("An unexpected error occurred during analysis: " + error.message);
+      setResult(response);
+      setAnalysisRuns((count) => count + 1);
+      toast.success("Demo analysis generated.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected analysis error.";
+      setErrorMessage(message);
+      toast.error("Unable to run the analysis demo.");
     } finally {
-      setIsLoadingAnalysis(false);
+      setIsRunning(false);
     }
   };
 
-  const handleBuildChart = (chartType: string, xAxis: string, yAxis: string) => {
-    setCurrentChart({ type: chartType, xAxis, yAxis });
-    showSuccess(`Generated ${chartType.replace("Chart", " chart")} for ${xAxis} vs ${yAxis}!`);
-  };
-
-  const handleTransformData = (column: string, transformation: string) => {
-    setIsLoadingTransformation(true);
-    setTimeout(() => {
-      setParsedData(prevData => {
-        const newData = prevData.map(row => ({ ...row })); // Deep copy to avoid direct state mutation
-        
-        switch (transformation) {
-          case "fill_missing_mean": {
-            const numericValues = newData
-              .map(row => Number(row[column]))
-              .filter(value => !isNaN(value));
-            const mean = numericValues.length > 0
-              ? numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length
-              : 0;
-            newData.forEach(row => {
-              if (row[column] === null || row[column] === undefined || row[column] === "") {
-                row[column] = mean.toFixed(2); // Fill with mean, keep 2 decimal places
-              }
-            });
-            showSuccess(`Simulated: Filled missing values in '${column}' with mean (${mean.toFixed(2)}).`);
-            break;
-          }
-          case "fill_missing_median": {
-            const numericValues = newData
-              .map(row => Number(row[column]))
-              .filter(value => !isNaN(value))
-              .sort((a, b) => a - b);
-            let median = 0;
-            if (numericValues.length > 0) {
-              const mid = Math.floor(numericValues.length / 2);
-              median = numericValues.length % 2 === 0
-                ? (numericValues[mid - 1] + numericValues[mid]) / 2
-                : numericValues[mid];
-            }
-            newData.forEach(row => {
-              if (row[column] === null || row[column] === undefined || row[column] === "") {
-                row[column] = median.toFixed(2); // Fill with median
-              }
-            });
-            showSuccess(`Simulated: Filled missing values in '${column}' with median (${median.toFixed(2)}).`);
-            break;
-          }
-          case "fill_missing_mode": {
-            const valueCounts: { [key: string]: number } = {};
-            newData.forEach(row => {
-              const value = String(row[column]);
-              if (value !== null && value !== undefined && value !== "") {
-                valueCounts[value] = (valueCounts[value] || 0) + 1;
-              }
-            });
-            let mode = "";
-            let maxCount = 0;
-            for (const value in valueCounts) {
-              if (valueCounts[value] > maxCount) {
-                maxCount = valueCounts[value];
-                mode = value;
-              }
-            }
-            newData.forEach(row => {
-              if (row[column] === null || row[column] === undefined || row[column] === "") {
-                row[column] = mode;
-              }
-            });
-            showSuccess(`Simulated: Filled missing values in '${column}' with mode ('${mode}').`);
-            break;
-          }
-          case "convert_to_number":
-            newData.forEach(row => {
-              const value = row[column];
-              const numValue = Number(value);
-              row[column] = !isNaN(numValue) ? numValue : null; // Convert to number, or null if not a valid number
-            });
-            showSuccess(`Simulated: Converted column '${column}' to numbers.`);
-            break;
-          case "convert_to_string":
-            newData.forEach(row => {
-              row[column] = String(row[column]);
-            });
-            showSuccess(`Simulated: Converted column '${column}' to strings.`);
-            break;
-          case "normalize_data": {
-            const numericValues = newData
-              .map(row => Number(row[column]))
-              .filter(value => !isNaN(value));
-            if (numericValues.length === 0) {
-              showError(`Cannot normalize '${column}': No numeric values found.`);
-              break;
-            }
-            const min = Math.min(...numericValues);
-            const max = Math.max(...numericValues);
-            const range = max - min;
-
-            if (range === 0) {
-              newData.forEach(row => {
-                if (!isNaN(Number(row[column]))) row[column] = 0; // All values are the same, normalize to 0
-              });
-              showSuccess(`Simulated: Normalized column '${column}' (all values are the same).`);
-            } else {
-              newData.forEach(row => {
-                const value = Number(row[column]);
-                if (!isNaN(value)) {
-                  row[column] = ((value - min) / range).toFixed(4); // Min-Max normalization
-                }
-              });
-              showSuccess(`Simulated: Normalized column '${column}' using Min-Max scaling.`);
-            }
-            break;
-          }
-          default:
-            showError("Unknown transformation selected.");
-        }
-        return newData;
-      });
-      setIsLoadingTransformation(false);
-    }, 1500); // Simulate transformation time
-  };
-
-  // Generate a simple data summary for the AI chat
-  const generateDataSummary = () => {
-    if (parsedData.length === 0) return "No data available.";
-    const numRows = parsedData.length;
-    const numCols = dataHeaders.length;
-    return `Your dataset contains ${numRows} rows and ${numCols} columns. Key columns include: ${dataHeaders.slice(0, 3).join(", ")}${numCols > 3 ? "..." : ""}.`;
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center py-8">
-      <Card className="w-full max-w-5xl">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center">AI-Powered Data Analysis</CardTitle>
-          <CardDescription className="text-center mt-2">
-            Upload your dataset and let our AI agents process, clean, analyze, and visualize your data.
-            Get insightful summaries and actionable intelligence.
+    <div className="space-y-12">
+      <Card className="rounded-3xl border border-border/70 bg-muted/30">
+        <CardHeader className="space-y-4">
+          <Badge variant="outline" className="w-fit rounded-full px-4 py-1 text-xs uppercase tracking-[0.5em] text-primary">
+            Guided Data Intelligence Demo
+          </Badge>
+          <CardTitle className="text-3xl font-semibold text-foreground md:text-4xl">
+            Upload, analyse, and narrate with production-grade Python tooling
+          </CardTitle>
+          <CardDescription className="max-w-3xl text-base text-muted-foreground">
+            Step through the studio just like a prospective client. Every run leverages pandas, numpy, seaborn, plotly,
+            scikit-learn, and matplotlib from the Hugging Face Space powering this portfolio. Hire me to unlock unlimited
+            datasets, deeper modelling, and automation.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8 text-center">
-          {parsedData.length > 0 ? (
-            <>
-              <h3 className="text-xl font-semibold">Your Data Preview:</h3>
-              <DataTablePreview data={parsedData} headers={dataHeaders} />
-
-              <div className="space-y-4">
-                <DataTransformation
-                  headers={dataHeaders}
-                  onTransformData={handleTransformData}
-                  isLoading={isLoadingTransformation}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Interactive Chart Builder:</h3>
-                <ChartBuilder
-                  headers={dataHeaders}
-                  onBuildChart={handleBuildChart}
-                  selectedChartType={selectedChartType}
-                  setSelectedChartType={setSelectedChartType}
-                  selectedXAxis={selectedXAxis}
-                  setSelectedXAxis={setSelectedXAxis}
-                  selectedYAxis={selectedYAxis}
-                  setSelectedYAxis={setSelectedYAxis}
-                />
-                {currentChart && (
-                  <div className="mt-6">
-                    <h4 className="text-lg font-medium mb-2">Generated Chart:</h4>
-                    <ChartDisplay
-                      chartType={currentChart.type}
-                      data={parsedData}
-                      xAxisKey={currentChart.xAxis}
-                      yAxisKey={currentChart.yAxis}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {isLoadingAnalysis && (
-                <div className="flex items-center justify-center space-x-2 text-primary mt-8">
-                  <LoadingSpinner size={20} />
-                  <span>Generating AI analysis report...</span>
-                </div>
-              )}
-
-              {analysisReport && (
-                <div className="mt-8 p-4 border rounded-md bg-muted text-left whitespace-pre-wrap">
-                  <h4 className="text-xl font-semibold mb-2">AI Analysis Report:</h4>
-                  <p className="text-muted-foreground">{analysisReport}</p>
-                </div>
-              )}
-
-              <div className="mt-8">
-                <AIChatInterface dataHeaders={dataHeaders} dataSummary={generateDataSummary()} />
-              </div>
-            </>
-          ) : (
-            <div className="text-center space-y-4">
-              <p className="text-lg text-muted-foreground">
-                No data uploaded yet. Please go to the <Link to="/upload-data" className="text-primary underline">Upload Data</Link> page to begin.
-              </p>
-              <Button size="lg" onClick={() => window.location.href = "/upload-data"}>
-                Upload Data
-              </Button>
-            </div>
-          )}
-        </CardContent>
       </Card>
+
+      <div className="grid gap-10 xl:grid-cols-[1.2fr,0.8fr]">
+        <section className="space-y-8">
+          <Card className="rounded-3xl border border-border/70 bg-background/95">
+            <CardHeader className="space-y-3">
+              <div className="flex flex-col gap-2 text-left">
+                <CardTitle className="text-2xl font-semibold">1. Select intelligence tier</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground">
+                  Choose how deep the demo should go. Each tier is tuned for specific demo narratives.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-3">
+              {analysisStages.map((stage) => (
+                <button
+                  key={stage.id}
+                  onClick={() => handleStageSelect(stage.id)}
+                  className={cn(
+                    "group flex h-full flex-col rounded-2xl border p-4 text-left transition-all",
+                    selectedStage === stage.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/30 hover:border-primary/60 hover:bg-primary/5",
+                  )}
+                  type="button"
+                >
+                  <div className="flex items-center gap-3">
+                    <stage.icon className="h-5 w-5 text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-xs uppercase tracking-[0.4em] text-muted-foreground">{stage.subtitle}</span>
+                      <span className="text-base font-semibold text-foreground">{stage.title}</span>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                    {stage.description}
+                  </p>
+                  <div className="mt-auto pt-4 text-[11px] uppercase tracking-[0.3em] text-primary">
+                    {stage.limitCopy}
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border border-border/70 bg-background/95">
+            <CardHeader className="space-y-3">
+              <CardTitle className="text-2xl font-semibold">2. Curate the mission</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Toggle the deliverables this client demo expects. The Space will simulate each workflow.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              {availableTasks.map((task) => (
+                <button
+                  key={task.id}
+                  onClick={() => toggleTask(task.id)}
+                  className={cn(
+                    "flex h-full flex-col rounded-2xl border p-4 text-left transition-colors",
+                    selectedTasks.includes(task.id)
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/30 hover:border-primary/60 hover:bg-primary/5",
+                  )}
+                  type="button"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-semibold text-foreground">{task.title}</h4>
+                    {selectedTasks.includes(task.id) && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{task.description}</p>
+                  <div className="mt-3 text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+                    Deliverables
+                  </div>
+                  <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                    {task.outcomes.map((outcome) => (
+                      <li key={outcome}>{outcome}</li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border border-border/70 bg-background/95">
+            <CardHeader className="space-y-3">
+              <CardTitle className="text-2xl font-semibold">3. Upload or keep the curated dataset</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Upload CSV or Excel files. The demo limits previews to {DEMO_PREVIEW_LIMIT} rows.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FileUploadZone onFileSelect={handleFileSelect} />
+              {isParsing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <LoadingSpinner size={18} />
+                  Parsing dataset...
+                </div>
+              )}
+              <Alert className="rounded-2xl border-primary/40 bg-primary/5">
+                <AlertTitle className="text-sm font-semibold">Demo guardrails</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground">
+                  The showcase is capped at {DEMO_ANALYSIS_LIMIT} automated run per visit. Full engagements include data pipelines,
+                  automation, and dedicated agents on-call.
+                </AlertDescription>
+              </Alert>
+              <div className="rounded-2xl border bg-muted/40 p-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <UploadCloud className="h-4 w-4 text-primary" />
+                  {rows.length} rows • {headers.length} columns ready for analysis
+                </div>
+                <p className="mt-2 leading-relaxed">
+                  {previewLimited
+                    ? `Preview trimmed to ${DEMO_PREVIEW_LIMIT} rows. Hire me to explore the full dataset.`
+                    : "Preview displays the full dataset."}
+                </p>
+              </div>
+              <DataTablePreview data={previewRows} headers={headers} />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Ready? Launch the agentic analysis. Additional runs require a partnership engagement.
+                </p>
+                <Button
+                  onClick={runAnalysis}
+                  disabled={isRunning}
+                  className="rounded-full px-6"
+                >
+                  {isRunning ? (
+                    <span className="flex items-center gap-2">
+                      <LoadingSpinner size={16} /> Generating demo...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Run analysis demo <ArrowRight className="h-4 w-4" />
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <aside className="space-y-6">
+          <Card className="rounded-3xl border border-primary/40 bg-primary/5">
+            <CardHeader className="space-y-3">
+              <CardTitle className="text-2xl font-semibold text-primary">
+                4. Review the AI-led findings
+              </CardTitle>
+              <CardDescription className="text-sm text-primary/80">
+                Results showcase the stack in action. Request the full engagement for unlimited narratives and agent workflows.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isRunning && (
+                <div className="flex items-center gap-2 text-primary">
+                  <LoadingSpinner size={18} />
+                  <span className="text-sm font-medium">Assembling insight decks...</span>
+                </div>
+              )}
+
+              {errorMessage && (
+                <Alert variant="destructive" className="rounded-2xl">
+                  <AlertTitle className="text-sm font-semibold">Analysis error</AlertTitle>
+                  <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+
+              {result ? (
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-primary/40 bg-background/95 p-4">
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Stage</p>
+                    <p className="text-lg font-semibold text-foreground">{result.stage.toUpperCase()}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {analysisStages.find((stage) => stage.id === selectedStage)?.limitCopy}
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Highlights</p>
+                    <ul className="grid gap-2 text-sm text-foreground">
+                      {result.insights.map((insight) => (
+                        <li key={insight} className="rounded-2xl border border-border/70 bg-background/95 p-3">
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Workflow Steps</p>
+                    <ul className="grid gap-2 text-sm text-muted-foreground">
+                      {result.stage_steps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {result.charts.length > 0 && (
+                    <div className="space-y-4">
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Visual artefacts</p>
+                      <div className="grid gap-4">
+                        {result.charts.map((chart) => (
+                          <figure
+                            key={chart.title}
+                            className="overflow-hidden rounded-2xl border border-border/70 bg-background/95"
+                          >
+                            <img src={chart.image} alt={chart.title} className="w-full" />
+                            <figcaption className="px-4 py-3 text-xs text-muted-foreground">
+                              <span className="font-semibold text-foreground">{chart.title}</span> — {chart.description}
+                            </figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {result.kmeans && Object.keys(result.kmeans).length > 0 && (
+                    <div className="space-y-3 rounded-2xl border border-border/70 bg-background/95 p-4 text-sm text-muted-foreground">
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Segmentation summary</p>
+                      <pre className="whitespace-pre-wrap text-xs">
+                        {JSON.stringify(result.kmeans, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  {result.anomalies && Object.keys(result.anomalies).length > 0 && (
+                    <div className="space-y-3 rounded-2xl border border-border/70 bg-background/95 p-4 text-sm text-muted-foreground">
+                      <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Anomaly preview</p>
+                      <pre className="whitespace-pre-wrap text-xs">
+                        {JSON.stringify(result.anomalies, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 text-xs text-primary">
+                    {result.limit_notice}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 rounded-2xl border border-dashed border-border/60 bg-background/95 p-6 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2 text-foreground">
+                    <Zap className="h-4 w-4 text-primary" />
+                    Run the analysis to see insights, visuals, and automation next steps.
+                  </p>
+                  <p>
+                    The Hugging Face backend executes Python notebooks live with pandas, numpy, seaborn, plotly, scikit-learn,
+                    and matplotlib. This preview keeps things short and sweet—just enough for recruiters to understand the power.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 };
