@@ -18,9 +18,15 @@ import {
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 
+type ChartDataValue = string | number | null | undefined;
+
+interface ChartDataPoint {
+  [key: string]: ChartDataValue;
+}
+
 interface ChartDisplayProps {
   chartType: string;
-  data: Record<string, any>[];
+  data: ChartDataPoint[];
   xAxisKey: string;
   yAxisKey: string;
 }

@@ -12,17 +12,21 @@ import AIChatInterface from "@/components/AIChatInterface";
 import DataTransformation from "@/components/DataTransformation";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
+type DataValue = string | number | null | undefined;
+
+type DataRow = Record<string, DataValue>;
+
 const DataAnalysis = () => {
   const location = useLocation();
   const { parsedData: initialParsedData, dataHeaders: initialDataHeaders, analysisType: initialAnalysisType } = (location.state || {}) as {
-    parsedData?: Record<string, string>[];
+    parsedData?: DataRow[];
     dataHeaders?: string[];
     analysisType?: string; // New: analysisType from Templates page
   };
 
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
   const [isLoadingTransformation, setIsLoadingTransformation] = useState<boolean>(false);
-  const [parsedData, setParsedData] = useState<Record<string, any>[]>([]);
+  const [parsedData, setParsedData] = useState<DataRow[]>([]);
   const [dataHeaders, setDataHeaders] = useState<string[]>([]);
   const [analysisReport, setAnalysisReport] = useState<string | null>(null); // Simplified to string
 
@@ -33,16 +37,23 @@ const DataAnalysis = () => {
 
   // Effect to load data and potentially trigger analysis
   useEffect(() => {
-    let dataToUse = initialParsedData;
-    let headersToUse = initialDataHeaders;
+    const dataToUse = initialParsedData;
+    const headersToUse = initialDataHeaders;
 
     if (dataToUse && dataToUse.length > 0) {
       // Convert string values to numbers for charting if possible
       const numericParsedData = dataToUse.map(row => {
-        const newRow: Record<string, any> = {};
+        const newRow: DataRow = {};
         for (const key in row) {
           const value = row[key];
-          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
+          const numericValue =
+            typeof value === "number"
+              ? value
+              : typeof value === "string" && value !== ""
+                ? Number(value)
+                : Number.NaN;
+          const isNumericValue = !Number.isNaN(numericValue);
+          newRow[key] = isNumericValue ? numericValue : value;
         }
         return newRow;
       });
@@ -72,11 +83,17 @@ const DataAnalysis = () => {
         { id: 8, category: "Clothing", sales: 130, profit: 23, region: "South" },
       ];
       const dummyHeaders = ["id", "category", "sales", "profit", "region"];
-      const numericDummyData = dummyData.map(row => {
-        const newRow: Record<string, any> = {};
+      const numericDummyData = dummyData.map<DataRow>(row => {
+        const newRow: DataRow = {};
         for (const key in row) {
-          const value = row[key];
-          newRow[key] = !isNaN(Number(value)) && value !== "" ? Number(value) : value;
+          const value = row[key as keyof typeof row];
+          const numericValue =
+            typeof value === "number"
+              ? value
+              : typeof value === "string" && value !== ""
+                ? Number(value)
+                : Number.NaN;
+          newRow[key] = !Number.isNaN(numericValue) ? numericValue : value;
         }
         return newRow;
       });
@@ -91,7 +108,7 @@ const DataAnalysis = () => {
   }, [initialParsedData, initialDataHeaders, initialAnalysisType]);
 
 
-  const handlePerformAnalysis = async (analysisType: string, currentData: Record<string, any>[], currentHeaders: string[]) => {
+  const handlePerformAnalysis = async (analysisType: string, currentData: DataRow[], currentHeaders: string[]) => {
     if (currentData.length === 0) {
       showError("No data available for analysis. Please upload a file first.");
       return;
@@ -119,9 +136,10 @@ const DataAnalysis = () => {
         setAnalysisReport(result.report); // LLM backend returns a string in 'report' field
         showSuccess(`AI ${analysisType.replace(/_/g, ' ')} analysis complete!`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
       console.error("Unexpected error during analysis:", error);
-      showError("An unexpected error occurred during analysis: " + error.message);
+      showError("An unexpected error occurred during analysis: " + message);
     } finally {
       setIsLoadingAnalysis(false);
     }
@@ -136,8 +154,8 @@ const DataAnalysis = () => {
     setIsLoadingTransformation(true);
     setTimeout(() => {
       setParsedData(prevData => {
-        const newData = prevData.map(row => ({ ...row })); // Deep copy to avoid direct state mutation
-        
+        const newData = prevData.map<DataRow>(row => ({ ...row })); // Deep copy to avoid direct state mutation
+
         switch (transformation) {
           case "fill_missing_mean": {
             const numericValues = newData

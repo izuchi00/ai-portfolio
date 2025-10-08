@@ -69,9 +69,10 @@ const AIChatInterface: React.FC<AIChatInterfaceProps> = ({ dataHeaders, dataSumm
         setMessages((prev) => [...prev, aiMessage]);
         toast.success("AI response received!");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
       console.error("Unexpected error:", error);
-      toast.error("An unexpected error occurred: " + error.message);
+      toast.error("An unexpected error occurred: " + message);
       const errorMessage: Message = { id: (Date.now() + 1).toString(), sender: "ai", text: "An unexpected error occurred. Please check the console for details." };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {

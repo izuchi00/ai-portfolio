@@ -88,8 +88,9 @@ const DataUpload = () => {
           setDataHeaders(headers);
           toast.success("Excel file parsed successfully!");
           setIsLoading(false);
-        } catch (error: any) {
-          toast.error(`Error parsing Excel file: ${error.message}`);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Unexpected error while parsing Excel file.";
+          toast.error(`Error parsing Excel file: ${message}`);
           setIsLoading(false);
         }
       } else {
