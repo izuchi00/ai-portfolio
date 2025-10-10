@@ -12,9 +12,31 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DataTablePreviewProps {
-  data: Record<string, string>[];
+  data: Record<string, unknown>[];
   headers: string[];
 }
+
+const formatCellValue = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "number") {
+    const isInteger = Number.isInteger(value);
+    return isInteger ? value.toString() : value.toFixed(3);
+  }
+
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      console.error("Unable to stringify table cell value", error);
+      return String(value);
+    }
+  }
+
+  return String(value);
+};
 
 const DataTablePreview: React.FC<DataTablePreviewProps> = ({ data, headers }) => {
   if (!data || data.length === 0) {
@@ -36,7 +58,7 @@ const DataTablePreview: React.FC<DataTablePreviewProps> = ({ data, headers }) =>
             <TableRow key={rowIndex}>
               {headers.map((header) => (
                 <TableCell key={`${rowIndex}-${header}`} className="whitespace-nowrap">
-                  {row[header]}
+                  {formatCellValue(row[header])}
                 </TableCell>
               ))}
             </TableRow>

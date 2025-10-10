@@ -5,9 +5,20 @@ This project showcases a computer science graduate portfolio focused on generati
 ## Key features
 
 - **Data Intelligence Studio** – A guided, tiered workflow (Basic, Intermediate, Expert) that runs through pandas, numpy, seaborn, plotly, scikit-learn, and matplotlib pipelines hosted on a Hugging Face Space.
+- **Dataset onboarding** – Drag-and-drop CSV and Excel uploads with instant schema detection and a 50-row preview table.
+- **Visualization workspace** – Build bar, line, scatter, area, and pie charts, copy shareable links, export PNG/SVG assets, and print PDF-ready analysis reports.
+- **Natural language assistant** – Ask contextual questions about the staged dataset and receive Hugging Face-powered answers within demo limits.
 - **Mission Templates** – Curated pathways for revenue, people operations, product sentiment, risk, and web intelligence demos.
 - **Web Scraping Agent** – A controlled showcase that highlights extraction limits and promotes the production build.
 - **Responsive layout** – Tailored for desktop, tablet, and mobile audiences with CTA-driven storytelling.
+
+## Demo walkthrough
+
+1. **Upload & preview** – Drop a CSV/Excel file (or use the staged sample) to inspect columns and data quality before analysis.
+2. **Choose intelligence tier** – Select Basic, Intermediate, or Expert missions to define the scope of the AI pipelines.
+3. **Run AI analysis** – Trigger the Hugging Face backend to orchestrate Python libraries, surface insights, and outline next steps.
+4. **Visualise & share** – Generate interactive charts, copy a shareable link, and export the results for decks or PDFs.
+5. **Ask follow-up questions** – Use the natural language assistant to query the dataset and highlight how a full engagement would scale.
 
 ## Running locally
 
