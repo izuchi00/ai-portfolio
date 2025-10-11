@@ -41,7 +41,7 @@ const TextAnalysis = () => {
       const lowerText = inputText.toLowerCase();
 
       switch (analysisType) {
-        case "sentiment_analysis":
+        case "sentiment_analysis": {
           let simulatedSentiment = "Neutral";
           if (lowerText.includes("great") || lowerText.includes("excellent") || lowerText.includes("happy") || lowerText.includes("positive")) {
             simulatedSentiment = "Positive";
@@ -51,8 +51,9 @@ const TextAnalysis = () => {
           setSentiment(simulatedSentiment);
           toast.success("Simulated sentiment analysis complete!");
           break;
+        }
 
-        case "text_extraction":
+        case "text_extraction": {
           const commonWords = ["the", "a", "an", "is", "are", "was", "were", "and", "or", "but", "to", "of", "in", "for", "on", "with", "this", "that", "it", "its"];
           const simulatedKeywords = Array.from(new Set(
             lowerText
@@ -64,14 +65,16 @@ const TextAnalysis = () => {
           setExtractedEntities(simulatedKeywords); // Using keywords as simulated entities
           toast.success("Simulated text extraction complete!");
           break;
+        }
 
-        case "language_translation":
+        case "language_translation": {
           // Simple simulation: just append " (translated to English)"
           setTranslatedText(`${inputText} (simulated translation to English)`);
           toast.success("Simulated language translation complete!");
           break;
+        }
 
-        default:
+        default: {
           // Default behavior if no specific analysisType or for general analysis
           let defaultSentiment = "Neutral";
           if (lowerText.includes("great") || lowerText.includes("excellent") || lowerText.includes("happy") || lowerText.includes("positive")) {
@@ -93,6 +96,7 @@ const TextAnalysis = () => {
           setSummary("This is a simulated summary of your text. For real-time, advanced summarization, a backend integration with a large language model is required.");
           toast.success("Simulated text analysis complete!");
           break;
+        }
       }
       setIsLoading(false);
     }, 2000); // Simulate 2-second analysis time

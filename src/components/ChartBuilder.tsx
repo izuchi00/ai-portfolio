@@ -1,10 +1,12 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Info } from "lucide-react";
 
 interface ChartBuilderProps {
   headers: string[];
@@ -15,7 +17,17 @@ interface ChartBuilderProps {
   setSelectedXAxis: (axis: string) => void;
   selectedYAxis: string;
   setSelectedYAxis: (axis: string) => void;
+  isDemoLocked?: boolean;
+  lockMessage?: string;
 }
+
+const chartTypeOptions = [
+  { value: "BarChart", label: "Bar", description: "Compare categorical groupings or cohorts." },
+  { value: "LineChart", label: "Line", description: "Trend data over time or ranked sequences." },
+  { value: "ScatterChart", label: "Scatter", description: "Show relationships between two numerical variables." },
+  { value: "AreaChart", label: "Area", description: "Highlight cumulative progression with filled areas." },
+  { value: "PieChart", label: "Pie", description: "Communicate proportional breakdowns." },
+];
 
 const ChartBuilder: React.FC<ChartBuilderProps> = ({
   headers,
@@ -26,11 +38,11 @@ const ChartBuilder: React.FC<ChartBuilderProps> = ({
   setSelectedXAxis,
   selectedYAxis,
   setSelectedYAxis,
+  isDemoLocked,
+  lockMessage,
 }) => {
-  const chartTypes = ["BarChart", "LineChart", "PieChart"]; // Add more as needed
-
   const handleBuildClick = () => {
-    if (selectedChartType && selectedXAxis && selectedYAxis) {
+    if (selectedChartType && selectedXAxis && selectedYAxis && !isDemoLocked) {
       onBuildChart(selectedChartType, selectedXAxis, selectedYAxis);
     }
   };
@@ -38,10 +50,13 @@ const ChartBuilder: React.FC<ChartBuilderProps> = ({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Build Your Chart</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Build a Visual Insight</CardTitle>
+        <CardDescription className="mt-2 text-center text-sm text-muted-foreground">
+          Select a chart type, map your columns, then generate a ready-to-share insight.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="chart-type">Chart Type</Label>
             <Select value={selectedChartType} onValueChange={setSelectedChartType}>
@@ -49,9 +64,12 @@ const ChartBuilder: React.FC<ChartBuilderProps> = ({
                 <SelectValue placeholder="Select chart type" />
               </SelectTrigger>
               <SelectContent>
-                {chartTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type.replace("Chart", " Chart")}
+                {chartTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium">{option.label} chart</span>
+                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -93,10 +111,20 @@ const ChartBuilder: React.FC<ChartBuilderProps> = ({
         <Button
           onClick={handleBuildClick}
           className="w-full"
-          disabled={!selectedChartType || !selectedXAxis || !selectedYAxis}
+          disabled={!selectedChartType || !selectedXAxis || !selectedYAxis || isDemoLocked}
         >
-          Generate Chart
+          {isDemoLocked ? "Demo Limit Reached" : "Generate Chart"}
         </Button>
+        {isDemoLocked && lockMessage && (
+          <p className="text-xs text-muted-foreground text-center">{lockMessage}</p>
+        )}
+        {!isDemoLocked && (
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Badge variant="secondary" className="flex items-center gap-1 rounded-full px-3 py-1">
+              <Info className="h-3 w-3" /> Use the export buttons to save as PNG, SVG, or PDF.
+            </Badge>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

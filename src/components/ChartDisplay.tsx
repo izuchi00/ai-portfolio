@@ -8,6 +8,10 @@ import {
   Line,
   PieChart,
   Pie,
+  ScatterChart,
+  Scatter,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,9 +22,15 @@ import {
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 
+type ChartDataValue = string | number | null | undefined;
+
+interface ChartDataPoint {
+  [key: string]: ChartDataValue;
+}
+
 interface ChartDisplayProps {
   chartType: string;
-  data: Record<string, any>[];
+  data: ChartDataPoint[];
   xAxisKey: string;
   yAxisKey: string;
 }
@@ -61,6 +71,34 @@ const ChartDisplay: React.FC<ChartDisplayProps> = ({ chartType, data, xAxisKey, 
             <Legend />
             <Line type="monotone" dataKey={yAxisKey} stroke="#82ca9d" activeDot={{ r: 8 }} />
           </LineChart>
+        );
+      case "ScatterChart":
+        return (
+          <ScatterChart>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" dataKey={xAxisKey} name={xAxisKey} />
+            <YAxis type="number" dataKey={yAxisKey} name={yAxisKey} />
+            <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+            <Legend />
+            <Scatter data={data} name="Observations" fill="#6366F1" />
+          </ScatterChart>
+        );
+      case "AreaChart":
+        return (
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey={xAxisKey} />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Area type="monotone" dataKey={yAxisKey} stroke="#6366F1" fillOpacity={1} fill="url(#colorArea)" />
+          </AreaChart>
         );
       case "PieChart":
         // For PieChart, yAxisKey will represent the value, xAxisKey will represent the category
